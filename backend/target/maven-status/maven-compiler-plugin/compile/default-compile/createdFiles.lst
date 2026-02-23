@@ -1,4 +1,5 @@
 com/harmoniq/UserDAO.class
+com/harmoniq/Song.class
 com/harmoniq/JwtUtil.class
 com/harmoniq/User.class
 com/harmoniq/Main.class
