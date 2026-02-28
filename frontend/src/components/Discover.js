@@ -2,27 +2,28 @@
 import React, { useState } from "react";
 
 export default function Discover({ onAddToPlaylist }) {
-  const [query, setQuery] = useState("");
   const [artist, setArtist] = useState("");
-  const [genre, setGenre] = useState("");
   const [songs, setSongs] = useState([]);
   const [playlistName, setPlaylistName] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const searchSongs = async () => {
-    if (!query && !artist && !genre) return;
+    if (!artist.trim()) return; // only search if artist is provided
+    setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (query) params.append("query", query);
-      if (artist) params.append("artist", artist);
-      if (genre) params.append("genre", genre);
+      params.append("artist", artist.trim());
 
       const res = await fetch(`http://localhost:8080/songs?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch songs");
+
       const data = await res.json();
       setSongs(data);
     } catch (err) {
       console.error(err);
       setSongs([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -39,26 +40,13 @@ export default function Discover({ onAddToPlaylist }) {
   return (
     <div>
       <h2>Discover Songs</h2>
+
       <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
-        <input
-          type="text"
-          placeholder="Song title"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ width: "200px" }}
-        />
         <input
           type="text"
           placeholder="Artist"
           value={artist}
           onChange={(e) => setArtist(e.target.value)}
-          style={{ width: "200px" }}
-        />
-        <input
-          type="text"
-          placeholder="Genre (e.g., pop, country)"
-          value={genre}
-          onChange={(e) => setGenre(e.target.value)}
           style={{ width: "200px" }}
         />
         <button onClick={searchSongs}>Search</button>
@@ -73,7 +61,9 @@ export default function Discover({ onAddToPlaylist }) {
       />
 
       <div>
-        {songs.length === 0 && <p>No songs found</p>}
+        {loading && <p>Loading songs...</p>}
+        {!loading && songs.length === 0 && <p>No songs found</p>}
+
         {songs.map((song) => (
           <div
             key={song.id}
@@ -96,5 +86,3 @@ export default function Discover({ onAddToPlaylist }) {
     </div>
   );
 }
-
-

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import Discover from "./Discover";
 import Playlist from "./Playlist";
+import Genre from "./Genre"; // ← new Genre component
 
 const Tabs = () => {
   const [activeTab, setActiveTab] = useState("discover");
@@ -23,6 +24,7 @@ const Tabs = () => {
         >
           Discover Songs
         </button>
+
         <button
           onClick={() => setActiveTab("playlist")}
           style={{
@@ -36,16 +38,38 @@ const Tabs = () => {
         >
           Playlists
         </button>
+
+        <button
+          onClick={() => setActiveTab("genre")}
+          style={{
+            padding: "10px 20px",
+            borderRadius: "5px",
+            border: "none",
+            backgroundColor: activeTab === "genre" ? "#ed859f" : "#444",
+            color: "#fff",
+            cursor: "pointer",
+          }}
+        >
+          Genres
+        </button>
       </div>
 
       {/* Tab content */}
       {activeTab === "discover" && (
-        <Discover setActiveTab={setActiveTab} selectedPlaylist={selectedPlaylist} />
+        <Discover
+          setActiveTab={setActiveTab}
+          selectedPlaylist={selectedPlaylist}
+        />
       )}
 
       {activeTab === "playlist" && (
-        <Playlist selectedPlaylist={selectedPlaylist} setSelectedPlaylist={setSelectedPlaylist} />
+        <Playlist
+          selectedPlaylist={selectedPlaylist}
+          setSelectedPlaylist={setSelectedPlaylist}
+        />
       )}
+
+      {activeTab === "genre" && <Genre />} {/* New Genre tab */}
     </div>
   );
 };
