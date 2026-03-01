@@ -5,6 +5,7 @@
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/Main.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/MusicBrainzService.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/Playlist.java
+/Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/PlaylistDAO.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/Song.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/SongDAO.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/User.java

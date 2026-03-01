@@ -1,8 +1,11 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { PlaylistContext } from "../context/PlaylistContext";
 
-const Playlist = ({ selectedPlaylist, setSelectedPlaylist }) => {
+const Playlist = () => {
   const { playlists } = useContext(PlaylistContext);
+  const [selectedPlaylist, setSelectedPlaylist] = useState("");
+
+  const current = playlists.find((p) => p.name === selectedPlaylist);
 
   return (
     <div>
@@ -24,26 +27,24 @@ const Playlist = ({ selectedPlaylist, setSelectedPlaylist }) => {
 
       {selectedPlaylist && (
         <>
-          {playlists.find((p) => p.name === selectedPlaylist)?.songs.length === 0 ? (
+          {current && current.songs.length === 0 ? (
             <p>No songs added yet.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {playlists
-                .find((p) => p.name === selectedPlaylist)
-                .songs.map((song) => (
-                  <div
-                    key={song.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "5px 0",
-                      borderBottom: "1px solid #333",
-                    }}
-                  >
-                    <span>{song.title} — {song.artists?.join(", ")}</span>
-                  </div>
-                ))}
+              {current.songs.map((song) => (
+                <div
+                  key={song.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "5px 0",
+                    borderBottom: "1px solid #333",
+                  }}
+                >
+                  <span>{song.title} — {song.artists?.join(", ")}</span>
+                </div>
+              ))}
             </div>
           )}
         </>

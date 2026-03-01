@@ -29,6 +29,25 @@ public class ArtistDAO {
         return id;
     }
 
+
+    public static String findArtistNameById(int artistId) throws Exception {
+        String sql = "SELECT name FROM artists WHERE id = ?";
+        Connection conn = Database.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setInt(1, artistId);
+    
+        ResultSet rs = ps.executeQuery();
+        String name = null;
+        if (rs.next()) {
+            name = rs.getString("name");
+        }
+    
+        rs.close();
+        ps.close();
+        conn.close();
+        return name;
+    }
+
     public static int saveArtist(String name, String mbid) throws Exception {
 
         String sql = "INSERT INTO artists(name, mbid) VALUES(?, ?)";

@@ -80,6 +80,50 @@ public class MusicBrainzService {
         return songs;
     }
 
+
+    public static List<Song> fetchSongsByTitle(String title) {
+        List<Song> songs = new ArrayList<>();
+        try {
+            // MusicBrainz search for recordings by title
+            String urlStr = "https://musicbrainz.org/ws/2/recording/?query=recording:" +
+                    URLEncoder.encode(title, "UTF-8") +
+                    "&fmt=json&limit=50";
+    
+            String response = sendGet(urlStr);
+            JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+    
+            if (json.has("recordings")) {
+                JsonArray recordings = json.getAsJsonArray("recordings");
+    
+                for (JsonElement recElem : recordings) {
+                    JsonObject rec = recElem.getAsJsonObject();
+    
+                    String id = rec.has("id") ? rec.get("id").getAsString() : null;
+                    String songTitle = rec.has("title") ? rec.get("title").getAsString() : null;
+    
+                    List<String> artists = new ArrayList<>();
+                    if (rec.has("artist-credit")) {
+                        JsonArray artistCredit = rec.getAsJsonArray("artist-credit");
+                        for (JsonElement acElem : artistCredit) {
+                            JsonObject ac = acElem.getAsJsonObject();
+                            if (ac.has("name")) {
+                                artists.add(ac.get("name").getAsString());
+                            }
+                        }
+                    }
+    
+                    List<String> genres = new ArrayList<>();
+                    if (id != null && songTitle != null) {
+                        songs.add(new Song(id, songTitle, artists, genres));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return songs;
+    }
+
     private static String sendGet(String urlStr) throws Exception {
 
         URL url = new URL(urlStr);

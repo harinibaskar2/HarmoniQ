@@ -1,18 +1,22 @@
-// Discover.js
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
+import { PlaylistContext } from "../context/PlaylistContext";
 
-export default function Discover({ onAddToPlaylist }) {
+export default function Discover() {
   const [artist, setArtist] = useState("");
+  const [title, setTitle] = useState("");
   const [songs, setSongs] = useState([]);
   const [playlistName, setPlaylistName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const { addSongToPlaylist } = useContext(PlaylistContext);
+
   const searchSongs = async () => {
-    if (!artist.trim()) return; // only search if artist is provided
+    if (!artist.trim() && !title.trim()) return;
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      params.append("artist", artist.trim());
+      if (artist.trim()) params.append("artist", artist.trim());
+      if (title.trim()) params.append("title", title.trim());
 
       const res = await fetch(`http://localhost:8080/songs?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch songs");
@@ -33,7 +37,7 @@ export default function Discover({ onAddToPlaylist }) {
       name = prompt("Enter playlist name:");
       if (!name) return;
     }
-    onAddToPlaylist(name, song); 
+    addSongToPlaylist(name, song); 
     setPlaylistName(""); 
   };
 
@@ -44,9 +48,16 @@ export default function Discover({ onAddToPlaylist }) {
       <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
         <input
           type="text"
-          placeholder="Artist"
+          placeholder="Artist (optional)"
           value={artist}
           onChange={(e) => setArtist(e.target.value)}
+          style={{ width: "200px" }}
+        />
+        <input
+          type="text"
+          placeholder="Song Title (optional)"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
           style={{ width: "200px" }}
         />
         <button onClick={searchSongs}>Search</button>
