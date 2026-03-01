@@ -38,6 +38,8 @@ public class Main {
 
     // 🔹 Create PlaylistDAO instance
     final PlaylistDAO playlistDAO = new PlaylistDAO();
+    UserDAO userDAO = new UserDAO();
+
 
     port(8080);
 
@@ -141,61 +143,151 @@ public class Main {
         // ---------------- DISCOVER SONGS ----------------
         get("/songs", (req, res) -> {
             res.type("application/json");
-            String artist = req.queryParams("artist");
-            String title = req.queryParams("title");
-
-            List<Song> uniqueSongs = new ArrayList<>();
-            Set<String> seen = new HashSet<>();
-
-            if (title != null && !title.trim().isEmpty()) {
-                List<Song> globalSongs = MusicBrainzService.fetchSongsByTitle(title.trim());
-                if (globalSongs != null) {
-                    for (Song s : globalSongs) {
-                        if (artist != null && !artist.trim().isEmpty()) {
-                            boolean matchesArtist = s.getArtists().stream()
-                                    .anyMatch(a -> a.toLowerCase().contains(artist.trim().toLowerCase()));
-                            if (!matchesArtist) continue;
-                        }
-                        String songArtist = s.getArtists().isEmpty() ? "Unknown Artist" : s.getArtists().get(0);
-                        String key = s.getTitle().toLowerCase() + "-" + songArtist.toLowerCase();
-                        if (!seen.contains(key)) {
-                            uniqueSongs.add(s);
-                            seen.add(key);
-                        }
-                    }
-                }
-            } else if (artist != null && !artist.trim().isEmpty()) {
-                Artist mbArtist = MusicBrainzService.fetchArtist(artist.trim());
-                if (mbArtist != null && mbArtist.getMbid() != null && !mbArtist.getMbid().isEmpty()) {
-                    int newArtistId = ArtistDAO.saveArtist(mbArtist.getName(), mbArtist.getMbid());
-                    List<Song> fetchedSongs = MusicBrainzService.fetchSongs(mbArtist.getMbid());
-                    if (fetchedSongs != null) {
-                        for (Song s : fetchedSongs) {
-                            String key = s.getTitle().toLowerCase() + "-" + mbArtist.getName().toLowerCase();
-                            if (!seen.contains(key)) {
-                                s.setArtists(Collections.singletonList(mbArtist.getName()));
-                                SongDAO.saveSong(s.getTitle(), s.getId(), newArtistId);
-                                uniqueSongs.add(s);
-                                seen.add(key);
-                            }
-                        }
-                    }
-                }
+        
+            final String artist =
+                    req.queryParams("artist") == null
+                            ? null
+                            : req.queryParams("artist").trim();
+        
+            final String title =
+                    req.queryParams("title") == null
+                            ? null
+                            : req.queryParams("title").trim();
+        
+            if ((artist == null || artist.isEmpty()) &&
+                (title == null || title.isEmpty())) {
+                return "[]";
             }
+        
+        
 
-            return gson.toJson(uniqueSongs);
+        
+        
+            // ---------------------------------------------------
+            // 🎤 CASE 1: ARTIST ONLY (DB FIRST)
+            // ---------------------------------------------------
+            if (artist != null && (title == null || title.isEmpty())) {
+        
+                Integer artistId = ArtistDAO.findArtistIdByName(artist);
+                if (artistId != null) {
+                    List<Song> dbSongs = SongDAO.findSongsByArtistId(artistId);
+                    if (!dbSongs.isEmpty()) {
+                        System.out.println("Returning from DB ✅");
+                        return gson.toJson(dbSongs);
+                    }
+                }
+        
+                // Fetch from MusicBrainz
+                Artist mbArtist = MusicBrainzService.fetchArtist(artist);
+                if (mbArtist == null || mbArtist.getMbid() == null) return "[]";
+        
+                int newArtistId = ArtistDAO.saveArtist(
+                        mbArtist.getName(),
+                        mbArtist.getMbid()
+                );
+        
+                List<Song> fetchedSongs =
+                        MusicBrainzService.fetchSongs(mbArtist.getMbid());
+        
+                if (fetchedSongs == null) return "[]";
+        
+                Set<String> seen = new HashSet<>();
+                List<Song> songsToReturn = new ArrayList<>();
+        
+                for (Song s : fetchedSongs) {
+                    if (s.getId() != null && !seen.contains(s.getId())) {
+        
+                        s.setArtists(Collections.singletonList(mbArtist.getName()));
+                        SongDAO.saveSong(s.getTitle(), s.getId(), newArtistId);
+        
+                        songsToReturn.add(s);
+                        seen.add(s.getId());
+                    }
+                }
+        
+                return gson.toJson(songsToReturn);
+            }
+        
+            // ---------------------------------------------------
+            // 🔎 CASE 2: TITLE ONLY
+            // ---------------------------------------------------
+            if (title != null && (artist == null || artist.isEmpty())) {
+        
+                List<Song> globalSongs =
+                        MusicBrainzService.fetchSongsByTitle(title);
+        
+                if (globalSongs == null) return "[]";
+        
+                Set<String> seen = new HashSet<>();
+                List<Song> uniqueSongs = new ArrayList<>();
+        
+                for (Song s : globalSongs) {
+        
+                    String firstArtist = s.getArtists().isEmpty()
+                            ? "Unknown Artist"
+                            : s.getArtists().get(0);
+        
+                    String key = s.getTitle().toLowerCase()
+                            + "-" +
+                            firstArtist.toLowerCase();
+        
+                    if (!seen.contains(key)) {
+                        uniqueSongs.add(s);
+                        seen.add(key);
+                    }
+                }
+        
+                return gson.toJson(uniqueSongs);
+            }
+        
+            // ---------------------------------------------------
+            // 🎤 + 🔎 CASE 3: ARTIST + TITLE
+            // ---------------------------------------------------
+            if (artist != null && title != null) {
+        
+                List<Song> globalSongs =
+                        MusicBrainzService.fetchSongsByTitle(title);
+        
+                if (globalSongs == null) return "[]";
+        
+                Set<String> seen = new HashSet<>();
+                List<Song> filtered = new ArrayList<>();
+        
+                for (Song s : globalSongs) {
+        
+                    boolean matchesArtist = s.getArtists().stream()
+                            .anyMatch(a ->
+                                    a.toLowerCase()
+                                     .contains(artist.toLowerCase())
+                            );
+        
+                    if (!matchesArtist) continue;
+        
+                    String key = s.getTitle().toLowerCase()
+                            + "-" +
+                            s.getArtists().get(0).toLowerCase();
+        
+                    if (!seen.contains(key)) {
+                        filtered.add(s);
+                        seen.add(key);
+                    }
+                }
+        
+                return gson.toJson(filtered);
+            }
+        
+            return "[]";
         });
 
         // ---------------- PLAYLIST ENDPOINTS ----------------
 
-        // Add song to playlist
         post("/playlists/add", (req, res) -> {
             res.type("application/json");
         
             Map<String, Object> body = gson.fromJson(req.body(),
                     new TypeToken<Map<String, Object>>() {}.getType());
         
-            String username = (String) body.get("username"); // TODO: replace with JWT logic
+            String username = (String) body.get("username");
             String playlistName = (String) body.get("playlistName");
             Map songMap = (Map) body.get("song");
         
@@ -207,7 +299,17 @@ public class Main {
                 return gson.toJson(resp);
             }
         
-            // safely extract artists and genres
+            // ✅ use instance
+            Integer userId = userDAO.getUserId(username);
+            if (userId == null) {
+                res.status(404);
+                Map<String, String> resp = new HashMap<>();
+                resp.put("status", "error");
+                resp.put("message", "User not found");
+                return gson.toJson(resp);
+            }
+        
+            // create Song object...
             List<String> artists = new ArrayList<>();
             if (songMap.get("artists") instanceof List) {
                 for (Object a : (List) songMap.get("artists")) {
@@ -229,8 +331,7 @@ public class Main {
                     genres
             );
         
-            // ✅ Use instance method
-            playlistDAO.addSong(username, playlistName, song);
+            playlistDAO.addSong(userId, playlistName, song);
         
             Map<String, String> resp = new HashMap<>();
             resp.put("status", "success");
@@ -240,11 +341,14 @@ public class Main {
         // Get all playlists for a user
         get("/playlists", (req, res) -> {
             res.type("application/json");
-            String username = req.queryParams("username"); // TODO: replace with JWT logic
+        
+            String username = req.queryParams("username");
             if (username == null) return "[]";
         
-            // ✅ Use instance method
-            List<Playlist> playlists = playlistDAO.getPlaylists(username);
+            Integer userId = userDAO.getUserId(username);
+            if (userId == null) return "[]";
+        
+            List<Playlist> playlists = playlistDAO.getPlaylists(userId);
             return gson.toJson(playlists);
         });
     }

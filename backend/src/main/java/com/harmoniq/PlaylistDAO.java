@@ -18,56 +18,66 @@ public class PlaylistDAO {
         try (Connection conn = DriverManager.getConnection(DB_URL);
              Statement stmt = conn.createStatement()) {
 
-            // Table for playlists
-            String sql = "CREATE TABLE IF NOT EXISTS playlists (" +
-                         "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                         "username TEXT NOT NULL," +
-                         "name TEXT NOT NULL," +
-                         "UNIQUE(username, name)" +
-                         ")";
-            stmt.execute(sql);
+            // 🔥 Playlists tied to user_id instead of username
+            String playlistsTable =
+                    "CREATE TABLE IF NOT EXISTS playlists (" +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                            "user_id INTEGER NOT NULL," +
+                            "name TEXT NOT NULL," +
+                            "UNIQUE(user_id, name)," +
+                            "FOREIGN KEY(user_id) REFERENCES users(id)" +
+                            ")";
+            stmt.execute(playlistsTable);
 
-            // Table for playlist songs
-            String sqlSongs = "CREATE TABLE IF NOT EXISTS playlist_songs (" +
-                              "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                              "playlist_id INTEGER NOT NULL," +
-                              "song_mbid TEXT NOT NULL," +
-                              "song_title TEXT NOT NULL," +
-                              "artist TEXT," +
-                              "FOREIGN KEY(playlist_id) REFERENCES playlists(id)" +
-                              ")";
-            stmt.execute(sqlSongs);
+            // 🔥 Duplicate-safe playlist songs
+            String playlistSongsTable =
+                    "CREATE TABLE IF NOT EXISTS playlist_songs (" +
+                            "playlist_id INTEGER NOT NULL," +
+                            "song_mbid TEXT NOT NULL," +
+                            "song_title TEXT NOT NULL," +
+                            "artist TEXT," +
+                            "PRIMARY KEY (playlist_id, song_mbid)," +
+                            "FOREIGN KEY(playlist_id) REFERENCES playlists(id)" +
+                            ")";
+            stmt.execute(playlistSongsTable);
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    // Fetch all playlists for a user
-    public List<Playlist> getPlaylists(String username) {
+    // ✅ Get all playlists for a user
+    public List<Playlist> getPlaylists(int userId) {
         List<Playlist> playlists = new ArrayList<>();
-        String sql = "SELECT * FROM playlists WHERE username = ?";
+
+        String sql = "SELECT * FROM playlists WHERE user_id = ?";
 
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, username);
+
+            ps.setInt(1, userId);
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
                 Playlist playlist = new Playlist(rs.getString("name"));
                 int playlistId = rs.getInt("id");
 
-                // fetch songs
-                String sqlSongs = "SELECT * FROM playlist_songs WHERE playlist_id = ?";
+                // Fetch songs
+                String sqlSongs =
+                        "SELECT * FROM playlist_songs WHERE playlist_id = ?";
+
                 try (PreparedStatement psSongs = conn.prepareStatement(sqlSongs)) {
                     psSongs.setInt(1, playlistId);
                     ResultSet rsSongs = psSongs.executeQuery();
+
                     while (rsSongs.next()) {
                         Song s = new Song(
-                            rsSongs.getString("song_mbid"),
-                            rsSongs.getString("song_title"),
-                            Collections.singletonList(rsSongs.getString("artist")),
-                            new ArrayList<>()
+                                rsSongs.getString("song_mbid"),
+                                rsSongs.getString("song_title"),
+                                Collections.singletonList(
+                                        rsSongs.getString("artist")
+                                ),
+                                new ArrayList<>()
                         );
                         playlist.addSong(s);
                     }
@@ -83,45 +93,70 @@ public class PlaylistDAO {
         return playlists;
     }
 
-    // Add a song to a user's playlist
-    public void addSong(String username, String playlistName, Song song) {
+    // ✅ Add song (user_id based)
+    public void addSong(int userId, String playlistName, Song song) {
+
         try (Connection conn = DriverManager.getConnection(DB_URL)) {
+
             conn.setAutoCommit(false);
 
-            // 1️⃣ Get or create playlist
             int playlistId = -1;
-            String selectPlaylist = "SELECT id FROM playlists WHERE username = ? AND name = ?";
-            try (PreparedStatement ps = conn.prepareStatement(selectPlaylist)) {
-                ps.setString(1, username);
+
+            // 1️⃣ Find playlist
+            String findPlaylist =
+                    "SELECT id FROM playlists WHERE user_id = ? AND name = ?";
+
+            try (PreparedStatement ps = conn.prepareStatement(findPlaylist)) {
+                ps.setInt(1, userId);
                 ps.setString(2, playlistName);
+
                 ResultSet rs = ps.executeQuery();
                 if (rs.next()) {
                     playlistId = rs.getInt("id");
                 }
             }
 
+            // 2️⃣ Create playlist if it doesn't exist
             if (playlistId == -1) {
-                String insertPlaylist = "INSERT INTO playlists(username, name) VALUES(?, ?)";
-                try (PreparedStatement ps = conn.prepareStatement(insertPlaylist, Statement.RETURN_GENERATED_KEYS)) {
-                    ps.setString(1, username);
+                String insertPlaylist =
+                        "INSERT INTO playlists(user_id, name) VALUES(?, ?)";
+
+                try (PreparedStatement ps =
+                             conn.prepareStatement(insertPlaylist, Statement.RETURN_GENERATED_KEYS)) {
+
+                    ps.setInt(1, userId);
                     ps.setString(2, playlistName);
                     ps.executeUpdate();
+
                     ResultSet keys = ps.getGeneratedKeys();
-                    if (keys.next()) playlistId = keys.getInt(1);
+                    if (keys.next()) {
+                        playlistId = keys.getInt(1);
+                    }
                 }
             }
 
-            // 2️⃣ Insert song
-            String insertSong = "INSERT INTO playlist_songs(playlist_id, song_mbid, song_title, artist) VALUES(?, ?, ?, ?)";
+            // 3️⃣ Insert song (duplicate safe)
+            String insertSong =
+                    "INSERT OR IGNORE INTO playlist_songs" +
+                            "(playlist_id, song_mbid, song_title, artist)" +
+                            " VALUES(?, ?, ?, ?)";
+
             try (PreparedStatement ps = conn.prepareStatement(insertSong)) {
+
                 ps.setInt(1, playlistId);
                 ps.setString(2, song.getId());
                 ps.setString(3, song.getTitle());
-                ps.setString(4, song.getArtists().isEmpty() ? "Unknown" : song.getArtists().get(0));
+                ps.setString(4,
+                        song.getArtists().isEmpty()
+                                ? "Unknown"
+                                : song.getArtists().get(0)
+                );
+
                 ps.executeUpdate();
             }
 
             conn.commit();
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
