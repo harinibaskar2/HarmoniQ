@@ -1,53 +1,61 @@
 import React, { useContext, useState } from "react";
 import { PlaylistContext } from "../context/PlaylistContext";
+import "./Playlist.css";
 
 const Playlist = () => {
-  const { playlists } = useContext(PlaylistContext);
-  const [selectedPlaylist, setSelectedPlaylist] = useState("");
+  const { playlists, removeSongFromPlaylist } = useContext(PlaylistContext);
+  const [activePlaylist, setActivePlaylist] = useState(null);
 
-  const current = playlists.find((p) => p.name === selectedPlaylist);
+  const togglePlaylist = (name) => {
+    setActivePlaylist(activePlaylist === name ? null : name);
+  };
+
+  const handleDelete = (playlistName, songId, songTitle) => {
+    if (window.confirm(`Are you sure you want to delete "${songTitle}" from ${playlistName}?`)) {
+      removeSongFromPlaylist(playlistName, songId);
+    }
+  };
 
   return (
-    <div>
+    <div className="playlist-container">
       <h2>Your Playlists</h2>
 
-      {/* Playlist selector */}
-      <select
-        value={selectedPlaylist || ""}
-        onChange={(e) => setSelectedPlaylist(e.target.value)}
-        style={{ padding: "5px 10px", borderRadius: "5px", marginBottom: "20px" }}
-      >
-        <option value="">-- Select Playlist --</option>
-        {playlists.map((p) => (
-          <option key={p.name} value={p.name}>
-            {p.name}
-          </option>
+      {/* Tabs */}
+      <div className="playlist-tabs">
+        {playlists.map((playlist) => (
+          <button
+            key={playlist.name}
+            className={`playlist-tab ${activePlaylist === playlist.name ? "active" : ""}`}
+            onClick={() => togglePlaylist(playlist.name)}
+          >
+            {playlist.name}
+          </button>
         ))}
-      </select>
+      </div>
 
-      {selectedPlaylist && (
-        <>
-          {current && current.songs.length === 0 ? (
-            <p>No songs added yet.</p>
+      {/* Songs Dropdown */}
+      {activePlaylist && (
+        <div className="songs-dropdown">
+          {playlists.find((p) => p.name === activePlaylist)?.songs.length === 0 ? (
+            <p className="no-songs">No songs added yet.</p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {current.songs.map((song) => (
-                <div
-                  key={song.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "5px 0",
-                    borderBottom: "1px solid #333",
-                  }}
-                >
-                  <span>{song.title} — {song.artists?.join(", ")}</span>
-                </div>
-              ))}
-            </div>
+            <ul className="songs-list">
+              {playlists
+                .find((p) => p.name === activePlaylist)
+                .songs.map((song) => (
+                  <li key={song.id} className="song-item">
+                    <span>{song.title} — {song.artists?.join(", ")}</span>
+                    <button
+                      className="delete-btn"
+                      onClick={() => handleDelete(activePlaylist, song.id, song.title)}
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+            </ul>
           )}
-        </>
+        </div>
       )}
     </div>
   );

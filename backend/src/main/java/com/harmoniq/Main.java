@@ -281,16 +281,19 @@ public class Main {
 
         // ---------------- PLAYLIST ENDPOINTS ----------------
 
+      // ---------------- PLAYLIST ENDPOINTS ----------------
+
+        // Add song to playlist
         post("/playlists/add", (req, res) -> {
             res.type("application/json");
-        
+
             Map<String, Object> body = gson.fromJson(req.body(),
                     new TypeToken<Map<String, Object>>() {}.getType());
-        
-            String username = (String) body.get("username");
+
+            String username = (String) body.get("username"); // TODO: replace with JWT logic
             String playlistName = (String) body.get("playlistName");
             Map songMap = (Map) body.get("song");
-        
+
             if (username == null || playlistName == null || songMap == null) {
                 res.status(400);
                 Map<String, String> resp = new HashMap<>();
@@ -298,58 +301,48 @@ public class Main {
                 resp.put("message", "Missing fields");
                 return gson.toJson(resp);
             }
-        
-            // ✅ use instance
-            Integer userId = userDAO.getUserId(username);
-            if (userId == null) {
-                res.status(404);
-                Map<String, String> resp = new HashMap<>();
-                resp.put("status", "error");
-                resp.put("message", "User not found");
-                return gson.toJson(resp);
-            }
-        
-            // create Song object...
+
+            // safely extract artists and genres
             List<String> artists = new ArrayList<>();
             if (songMap.get("artists") instanceof List) {
                 for (Object a : (List) songMap.get("artists")) {
                     artists.add(a.toString());
                 }
             }
-        
+
             List<String> genres = new ArrayList<>();
             if (songMap.get("genres") instanceof List) {
                 for (Object g : (List) songMap.get("genres")) {
                     genres.add(g.toString());
                 }
             }
-        
+
             Song song = new Song(
                     (String) songMap.get("id"),
                     (String) songMap.get("title"),
                     artists,
                     genres
             );
-        
-            playlistDAO.addSong(userId, playlistName, song);
-        
+
+            // ✅ Use instance method
+            playlistDAO.addSong(username, playlistName, song);
+
             Map<String, String> resp = new HashMap<>();
             resp.put("status", "success");
             return gson.toJson(resp);
         });
-        
+
         // Get all playlists for a user
         get("/playlists", (req, res) -> {
             res.type("application/json");
-        
-            String username = req.queryParams("username");
+            String username = req.queryParams("username"); // TODO: replace with JWT logic
             if (username == null) return "[]";
-        
-            Integer userId = userDAO.getUserId(username);
-            if (userId == null) return "[]";
-        
-            List<Playlist> playlists = playlistDAO.getPlaylists(userId);
+
+            // ✅ Use instance method
+            List<Playlist> playlists = playlistDAO.getPlaylists(username);
             return gson.toJson(playlists);
         });
-    }
-}
+
+
+    } 
+} 

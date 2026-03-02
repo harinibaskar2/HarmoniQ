@@ -1,74 +1,104 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
+import axios from "axios";
+import { PlaylistContext } from "../context/PlaylistContext";
 
-export default function Genre() {
+const genres = ["Pop", "Rock", "Jazz", "Classical", "Electronic"];
+
+export default function GenreTab() {
   const [selectedGenre, setSelectedGenre] = useState("");
   const [songs, setSongs] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Dummy songs data
-  const allSongs = [
-    { id: "1", title: "Song A", artists: ["Artist 1"], genres: ["Pop"] },
-    { id: "2", title: "Song B", artists: ["Artist 2"], genres: ["Rock"] },
-    { id: "3", title: "Song C", artists: ["Artist 3"], genres: ["Jazz"] },
-    { id: "4", title: "Song D", artists: ["Artist 4"], genres: ["Pop", "Rock"] },
-    { id: "5", title: "Song E", artists: ["Artist 5"], genres: ["Classical"] },
-  ];
+  const { addSongToPlaylist } = useContext(PlaylistContext);
 
-  // Predefined genre list
-  const genres = ["All", "Pop", "Rock", "Jazz", "Classical"];
-
-  const filterByGenre = (genre) => {
+  const fetchSongs = async (genre) => {
     setSelectedGenre(genre);
+    setLoading(true);
 
-    if (genre === "All" || genre === "") {
-      setSongs(allSongs);
-      return;
+    try {
+      const res = await axios.get(`/api/genres/top-tracks/${genre.toLowerCase()}`);
+      setSongs(res.data);
+    } catch (err) {
+      console.error(err);
+      setSongs([]);
     }
 
-    const filtered = allSongs.filter((s) =>
-      s.genres.some((g) => g.toLowerCase() === genre.toLowerCase())
-    );
-    setSongs(filtered);
+    setLoading(false);
+  };
+
+  const handleAddToPlaylist = (song) => {
+    const playlistName = prompt("Enter playlist name to add this song:");
+    if (playlistName) {
+      addSongToPlaylist(playlistName, {
+        id: song.mbid,
+        title: song.title,
+        artists: song.artists,
+      });
+      alert(`Added "${song.title}" to playlist "${playlistName}"`);
+    }
   };
 
   return (
-    <div>
+    <div style={{ maxWidth: 800, margin: "20px auto" }}>
       <h2>Genre Explorer</h2>
 
-      <div style={{ marginBottom: "20px" }}>
-        <select
-          value={selectedGenre}
-          onChange={(e) => filterByGenre(e.target.value)}
-          style={{ padding: "5px 10px", borderRadius: "5px" }}
-        >
-          {genres.map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
-          ))}
-        </select>
+      {/* Genre Tabs */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
+        {genres.map((genre) => (
+          <button
+            key={genre}
+            onClick={() => fetchSongs(genre)}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "20px",
+              border: "1px solid #ccc",
+              backgroundColor: selectedGenre === genre ? "#007bff" : "#fff",
+              color: selectedGenre === genre ? "#fff" : "#000",
+              cursor: "pointer",
+            }}
+          >
+            {genre}
+          </button>
+        ))}
       </div>
 
-      <div>
-        {songs.length === 0 ? (
-          <p>No songs found</p>
-        ) : (
-          songs.map((song) => (
+      {loading && <p>Loading songs...</p>}
+
+      {!loading && songs.length > 0 && (
+        <div style={{ border: "1px solid #ccc", borderRadius: "10px", padding: "10px", backgroundColor: "#fff" }}>
+          {songs.map((song) => (
             <div
-              key={song.id}
+              key={song.mbid}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                padding: "6px 0",
+                alignItems: "center",
+                padding: "8px 10px",
                 borderBottom: "1px solid #eee",
               }}
             >
               <span>
-                {song.title} — {song.artists.join(", ")} ({song.genres.join(", ")})
+                {song.title} — {song.artists.join(", ")}
               </span>
+              <button
+                onClick={() => handleAddToPlaylist(song)}
+                style={{
+                  padding: "2px 6px",
+                  backgroundColor: "#007bff",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                + Playlist
+              </button>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && songs.length === 0 && selectedGenre && <p>No songs found for {selectedGenre}</p>}
     </div>
   );
 }

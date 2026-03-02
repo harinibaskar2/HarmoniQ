@@ -1,21 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import { PlaylistProvider } from "./context/PlaylistContext";
 import Tabs from "./components/Tabs";
 
 function App() {
-  const [loggedIn, setLoggedIn] = useState(() => !!localStorage.getItem("token"));
+  const [loggedIn, setLoggedIn] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
 
-
-
-  const handleLogin = (token) => {
-    if (!token) return;
-    localStorage.setItem("token", token);
-    setLoggedIn(true);
-  };
-
+  const handleLogin = () => setLoggedIn(true);
   const handleLogout = () => {
     localStorage.removeItem("token");
     setLoggedIn(false);
@@ -30,7 +23,6 @@ function App() {
           color: "#fff",
           padding: "20px",
           fontFamily: "Arial, sans-serif",
-          position: "relative", // for positioning logout button
         }}
       >
         {!loggedIn ? (
@@ -77,6 +69,8 @@ function App() {
           )
         ) : (
           <>
+            <h2 style={{ textAlign: "center" }}>Welcome! You are logged in ✅</h2>
+
             {/* Tabs fill the main area */}
             <Tabs />
 
@@ -105,3 +99,5 @@ function App() {
 }
 
 export default App;
+
+

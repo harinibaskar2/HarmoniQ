@@ -1,62 +1,47 @@
-import { createContext, useState, useEffect } from "react";
-import axios from "axios";
+// PlaylistContext.js
+import { createContext, useState } from "react";
 
 export const PlaylistContext = createContext();
 
 export const PlaylistProvider = ({ children }) => {
-  const [playlists, setPlaylists] = useState([]);
+  const [playlists, setPlaylists] = useState([]); // array of { name, songs: [] }
 
-  // Fetch playlists from backend for a given username
-  const fetchPlaylists = async (username) => {
-    try {
-      const res = await axios.get("http://localhost:8080/playlists", {
-        params: { username }, // matches backend query param
-      });
-      setPlaylists(res.data);
-    } catch (err) {
-      console.error("Failed to fetch playlists:", err);
-    }
-  };
+  // Add a song to a playlist
+  const addSongToPlaylist = (playlistName, song) => {
+    setPlaylists((prev) => {
+      const existing = prev.find((p) => p.name === playlistName);
 
-  // Add a song to a playlist (also POST to backend)
-  const addSongToPlaylist = async (username, playlistName, song) => {
-    try {
-      await axios.post("http://localhost:8080/playlists/add", {
-        username,
-        playlistName,
-        song,
-      });
-
-      // Update local state
-      setPlaylists((prev) => {
-        const existing = prev.find((p) => p.name === playlistName);
-        if (existing) {
-          if (!existing.songs.find((s) => s.id === song.id)) {
-            return prev.map((p) =>
-              p.name === playlistName
-                ? { ...p, songs: [...p.songs, song] }
-                : p
-            );
-          }
-          return prev;
-        } else {
-          return [...prev, { name: playlistName, songs: [song] }];
+      if (existing) {
+        // Add song if it doesn't already exist
+        if (!existing.songs.find((s) => s.id === song.id)) {
+          return prev.map((p) =>
+            p.name === playlistName
+              ? { ...p, songs: [...p.songs, song] }
+              : p
+          );
         }
-      });
-    } catch (err) {
-      console.error("Failed to add song to playlist:", err);
-    }
+        return prev; // song already exists
+      } else {
+        // Create new playlist
+        return [...prev, { name: playlistName, songs: [song] }];
+      }
+    });
   };
 
-  // 🔹 Fetch playlists on mount if user is logged in
-  useEffect(() => {
-    const username = localStorage.getItem("username"); // or from JWT
-    if (username) fetchPlaylists(username);
-  }, []);
+  // Remove a song from a playlist
+  const removeSongFromPlaylist = (playlistName, songId) => {
+    setPlaylists((prev) =>
+      prev.map((p) =>
+        p.name === playlistName
+          ? { ...p, songs: p.songs.filter((song) => song.id !== songId) }
+          : p
+      )
+    );
+  };
 
   return (
     <PlaylistContext.Provider
-      value={{ playlists, fetchPlaylists, addSongToPlaylist }}
+      value={{ playlists, addSongToPlaylist, removeSongFromPlaylist }}
     >
       {children}
     </PlaylistContext.Provider>
