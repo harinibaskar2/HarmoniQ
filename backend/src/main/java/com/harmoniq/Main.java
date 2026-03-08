@@ -140,39 +140,41 @@ public class Main {
             return gson.toJson(resp);
         });
 
-        // ---------------- DISCOVER SONGS ----------------
         get("/songs", (req, res) -> {
             res.type("application/json");
         
-            final String artist =
+            String artist =
                     req.queryParams("artist") == null
-                            ? null
+                            ? ""
                             : req.queryParams("artist").trim();
         
-            final String title =
+            String title =
                     req.queryParams("title") == null
-                            ? null
+                            ? ""
                             : req.queryParams("title").trim();
         
-            if ((artist == null || artist.isEmpty()) &&
-                (title == null || title.isEmpty())) {
+            boolean refresh =
+                    "true".equalsIgnoreCase(req.queryParams("refresh"));
+        
+            if (artist.isEmpty() && title.isEmpty()) {
                 return "[]";
             }
         
+            List<Song> finalResults = new ArrayList<>();
         
-
-        
-        
-            // ---------------------------------------------------
-            // 🎤 CASE 1: ARTIST ONLY (DB FIRST)
-            // ---------------------------------------------------
-            if (artist != null && (title == null || title.isEmpty())) {
+            // =====================================================
+            // CASE 1: ARTIST SEARCH
+            // =====================================================
+            if (!artist.isEmpty() && title.isEmpty()) {
         
                 Integer artistId = ArtistDAO.findArtistIdByName(artist);
-                if (artistId != null) {
+        
+                // ⭐ Use DB but allow refresh bypass
+                if (!refresh && artistId != null) {
                     List<Song> dbSongs = SongDAO.findSongsByArtistId(artistId);
+        
                     if (!dbSongs.isEmpty()) {
-                        System.out.println("Returning from DB ✅");
+                        Collections.shuffle(dbSongs);
                         return gson.toJson(dbSongs);
                     }
                 }
@@ -192,26 +194,32 @@ public class Main {
                 if (fetchedSongs == null) return "[]";
         
                 Set<String> seen = new HashSet<>();
-                List<Song> songsToReturn = new ArrayList<>();
         
                 for (Song s : fetchedSongs) {
-                    if (s.getId() != null && !seen.contains(s.getId())) {
+                    if (s.getId() == null) continue;
         
+                    if (!seen.contains(s.getId())) {
                         s.setArtists(Collections.singletonList(mbArtist.getName()));
-                        SongDAO.saveSong(s.getTitle(), s.getId(), newArtistId);
         
-                        songsToReturn.add(s);
+                        SongDAO.saveSong(
+                                s.getTitle(),
+                                s.getId(),
+                                newArtistId
+                        );
+        
+                        finalResults.add(s);
                         seen.add(s.getId());
                     }
                 }
         
-                return gson.toJson(songsToReturn);
+                Collections.shuffle(finalResults);
+                return gson.toJson(finalResults);
             }
         
-            // ---------------------------------------------------
-            // 🔎 CASE 2: TITLE ONLY
-            // ---------------------------------------------------
-            if (title != null && (artist == null || artist.isEmpty())) {
+            // =====================================================
+            // CASE 2: TITLE SEARCH
+            // =====================================================
+            if (!title.isEmpty() && artist.isEmpty()) {
         
                 List<Song> globalSongs =
                         MusicBrainzService.fetchSongsByTitle(title);
@@ -219,7 +227,6 @@ public class Main {
                 if (globalSongs == null) return "[]";
         
                 Set<String> seen = new HashSet<>();
-                List<Song> uniqueSongs = new ArrayList<>();
         
                 for (Song s : globalSongs) {
         
@@ -227,23 +234,25 @@ public class Main {
                             ? "Unknown Artist"
                             : s.getArtists().get(0);
         
-                    String key = s.getTitle().toLowerCase()
-                            + "-" +
-                            firstArtist.toLowerCase();
+                    String key =
+                            s.getTitle().toLowerCase()
+                                    + "-"
+                                    + firstArtist.toLowerCase();
         
                     if (!seen.contains(key)) {
-                        uniqueSongs.add(s);
+                        finalResults.add(s);
                         seen.add(key);
                     }
                 }
         
-                return gson.toJson(uniqueSongs);
+                Collections.shuffle(finalResults);
+                return gson.toJson(finalResults);
             }
         
-            // ---------------------------------------------------
-            // 🎤 + 🔎 CASE 3: ARTIST + TITLE
-            // ---------------------------------------------------
-            if (artist != null && title != null) {
+            // =====================================================
+            // CASE 3: ARTIST + TITLE SEARCH
+            // =====================================================
+            if (!artist.isEmpty() && !title.isEmpty()) {
         
                 List<Song> globalSongs =
                         MusicBrainzService.fetchSongsByTitle(title);
@@ -251,34 +260,35 @@ public class Main {
                 if (globalSongs == null) return "[]";
         
                 Set<String> seen = new HashSet<>();
-                List<Song> filtered = new ArrayList<>();
         
                 for (Song s : globalSongs) {
         
-                    boolean matchesArtist = s.getArtists().stream()
-                            .anyMatch(a ->
-                                    a.toLowerCase()
-                                     .contains(artist.toLowerCase())
-                            );
+                    boolean matchesArtist =
+                            s.getArtists().stream()
+                                    .anyMatch(a ->
+                                            a.toLowerCase()
+                                                    .contains(artist.toLowerCase())
+                                    );
         
                     if (!matchesArtist) continue;
         
-                    String key = s.getTitle().toLowerCase()
-                            + "-" +
-                            s.getArtists().get(0).toLowerCase();
+                    String key =
+                            s.getTitle().toLowerCase()
+                                    + "-"
+                                    + s.getArtists().get(0).toLowerCase();
         
                     if (!seen.contains(key)) {
-                        filtered.add(s);
+                        finalResults.add(s);
                         seen.add(key);
                     }
                 }
         
-                return gson.toJson(filtered);
+                Collections.shuffle(finalResults);
+                return gson.toJson(finalResults);
             }
         
-            return "[]";
+            return gson.toJson(finalResults);
         });
-
         // ---------------- PLAYLIST ENDPOINTS ----------------
 
       // ---------------- PLAYLIST ENDPOINTS ----------------
@@ -351,17 +361,27 @@ public class Main {
             return gson.toJson(genres);
         });
 
-        // ---------------- SONGS BY GENRE ----------------
         get("/songs/genre", (req, res) -> {
             res.type("application/json");
+        
             String genre = req.queryParams("genre");
+        
             if (genre == null || genre.isEmpty()) {
                 return "[]";
             }
+        
             List<Song> songs = MusicBrainzService.fetchSongsByGenre(genre);
-            return gson.toJson(songs);
+        
+            // ⭐ Randomize results so refresh shows new songs
+            Collections.shuffle(songs);
+        
+            // ⭐ Return only first 10 songs to keep UI clean
+            int limit = Math.min(10, songs.size());
+            List<Song> randomSongs = songs.subList(0, limit);
+        
+            return gson.toJson(randomSongs);
         });
 
-
     } 
+
 } 

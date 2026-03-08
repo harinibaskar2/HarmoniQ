@@ -10,15 +10,28 @@ export default function Discover() {
 
   const { addSongToPlaylist } = useContext(PlaylistContext);
 
-  const searchSongs = async () => {
-    if (!artist.trim() && !title.trim()) return;
+  // ✅ Search + Refresh logic
+  const fetchSongs = async () => {
+    if (!artist.trim() && !title.trim()) {
+      alert("Enter artist or title to search");
+      return;
+    }
+
     setLoading(true);
+
     try {
       const params = new URLSearchParams();
+
       if (artist.trim()) params.append("artist", artist.trim());
       if (title.trim()) params.append("title", title.trim());
 
-      const res = await fetch(`http://localhost:8080/songs?${params.toString()}`);
+      // ⭐ Prevent browser caching + force backend refresh
+      params.append("t", Date.now());
+
+      const res = await fetch(
+        `http://localhost:8080/songs?${params.toString()}`
+      );
+
       if (!res.ok) throw new Error("Failed to fetch songs");
 
       const data = await res.json();
@@ -33,18 +46,21 @@ export default function Discover() {
 
   const handleAddToPlaylist = (song) => {
     let name = playlistName.trim();
+
     if (!name) {
       name = prompt("Enter playlist name:");
       if (!name) return;
     }
-    addSongToPlaylist(name, song); 
-    setPlaylistName(""); 
+
+    addSongToPlaylist(name, song);
+    setPlaylistName("");
   };
 
   return (
     <div>
       <h2>Discover Songs</h2>
 
+      {/* Search Controls */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
         <input
           type="text"
@@ -53,6 +69,7 @@ export default function Discover() {
           onChange={(e) => setArtist(e.target.value)}
           style={{ width: "200px" }}
         />
+
         <input
           type="text"
           placeholder="Song Title (optional)"
@@ -60,9 +77,12 @@ export default function Discover() {
           onChange={(e) => setTitle(e.target.value)}
           style={{ width: "200px" }}
         />
-        <button onClick={searchSongs}>Search</button>
+
+        <button onClick={fetchSongs}>Search</button>
+        <button onClick={fetchSongs}>Refresh</button>
       </div>
 
+      {/* Playlist Input */}
       <input
         type="text"
         placeholder="Playlist name (optional)"
@@ -71,6 +91,7 @@ export default function Discover() {
         style={{ marginBottom: "20px", width: "200px" }}
       />
 
+      {/* Song List */}
       <div>
         {loading && <p>Loading songs...</p>}
         {!loading && songs.length === 0 && <p>No songs found</p>}
@@ -88,9 +109,15 @@ export default function Discover() {
             }}
           >
             <span>
-              {song.title} {song.artists && song.artists.length > 0 ? `- ${song.artists.join(", ")}` : ""}
+              {song.title}{" "}
+              {song.artists && song.artists.length > 0
+                ? `- ${song.artists.join(", ")}`
+                : ""}
             </span>
-            <button onClick={() => handleAddToPlaylist(song)}>Add to Playlist</button>
+
+            <button onClick={() => handleAddToPlaylist(song)}>
+              Add to Playlist
+            </button>
           </div>
         ))}
       </div>

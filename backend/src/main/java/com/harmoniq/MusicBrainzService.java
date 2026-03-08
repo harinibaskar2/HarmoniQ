@@ -145,7 +145,7 @@ public class MusicBrainzService {
         
         
         
-        genres.add("hip hop");
+        
         
         return genres;
     }
