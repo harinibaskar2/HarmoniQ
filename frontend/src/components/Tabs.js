@@ -1,7 +1,8 @@
+// src/components/Tabs.js
 import React, { useState } from "react";
 import Discover from "./Discover";
 import Playlist from "./Playlist";
-import Genre from "./Genre"; // ← new Genre component
+import GenreTab from "./GenreTab"; // Combined genre + songs component
 
 const Tabs = () => {
   const [activeTab, setActiveTab] = useState("discover");
@@ -69,7 +70,7 @@ const Tabs = () => {
         />
       )}
 
-      {activeTab === "genre" && <Genre />} {/* New Genre tab */}
+      {activeTab === "genre" && <GenreTab />} {/* Combined Genre + Songs */}
     </div>
   );
 };

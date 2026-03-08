@@ -344,5 +344,24 @@ public class Main {
         });
 
 
+                // ---------------- GENRES DROPDOWN ----------------
+        get("/genres", (req, res) -> {
+            res.type("application/json");
+            List<String> genres = MusicBrainzService.getAllGenres();
+            return gson.toJson(genres);
+        });
+
+        // ---------------- SONGS BY GENRE ----------------
+        get("/songs/genre", (req, res) -> {
+            res.type("application/json");
+            String genre = req.queryParams("genre");
+            if (genre == null || genre.isEmpty()) {
+                return "[]";
+            }
+            List<Song> songs = MusicBrainzService.fetchSongsByGenre(genre);
+            return gson.toJson(songs);
+        });
+
+
     } 
 } 

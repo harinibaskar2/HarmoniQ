@@ -81,6 +81,10 @@ public class MusicBrainzService {
     }
 
 
+
+    
+
+
     public static List<Song> fetchSongsByTitle(String title) {
         List<Song> songs = new ArrayList<>();
         try {
@@ -124,8 +128,82 @@ public class MusicBrainzService {
         return songs;
     }
 
-    private static String sendGet(String urlStr) throws Exception {
 
+
+    /**
+     * Return the list of genres for the dropdown.
+     */
+    public static List<String> getAllGenres() {
+        List<String> genres = new ArrayList<String>();
+        genres.add("pop");
+        genres.add("country");
+        
+        genres.add("rock");
+        genres.add("r&b");
+        genres.add("electronic");
+        
+        
+        
+        
+        genres.add("hip hop");
+        
+        return genres;
+    }
+
+    /**
+     * Fetch songs tagged under a specific genre.
+     */
+    public static List<Song> fetchSongsByGenre(String genre) {
+        List<Song> songs = new ArrayList<Song>();
+        try {
+            String urlStr = "https://musicbrainz.org/ws/2/recording?query=tag:" +
+                            URLEncoder.encode(genre, "UTF-8") +
+                            "&fmt=json&limit=50";
+
+            String response = sendGet(urlStr);
+            JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+            if (json.has("recordings")) {
+                JsonArray recordings = json.getAsJsonArray("recordings");
+
+                for (JsonElement recElem : recordings) {
+                    JsonObject rec = recElem.getAsJsonObject();
+
+                    String id = rec.has("id") ? rec.get("id").getAsString() : null;
+                    String title = rec.has("title") ? rec.get("title").getAsString() : null;
+
+                    List<String> artists = new ArrayList<String>();
+
+                    if (rec.has("artist-credit")) {
+                        JsonArray artistCredit = rec.getAsJsonArray("artist-credit");
+                        for (JsonElement acElem : artistCredit) {
+                            JsonObject ac = acElem.getAsJsonObject();
+                            if (ac.has("artist")) {
+                                JsonObject artistObj = ac.getAsJsonObject("artist");
+                                if (artistObj.has("name")) {
+                                    artists.add(artistObj.get("name").getAsString());
+                                }
+                            }
+                        }
+                    }
+
+                    if (id != null && title != null) {
+                        // genres list is empty; handled separately in dropdown
+                        songs.add(new Song(id, title, artists, new ArrayList<String>()));
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return songs;
+    }
+
+    /**
+     * Utility method for HTTP GET requests
+     */
+    private static String sendGet(String urlStr) throws Exception {
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
@@ -148,4 +226,5 @@ public class MusicBrainzService {
         return content.toString();
     }
 }
+
 
