@@ -7,6 +7,7 @@ function GenreTab() {
   const [selectedGenre, setSelectedGenre] = useState("");
   const [songs, setSongs] = useState([]);
   const [playlistName, setPlaylistName] = useState("");
+  const [loading, setLoading] = useState(false); // track loading
 
   const { addSongToPlaylist } = useContext(PlaylistContext);
 
@@ -22,6 +23,7 @@ function GenreTab() {
   const fetchSongsByGenre = () => {
     if (!selectedGenre) return;
 
+    setLoading(true); // start loading
     fetch(
       `http://localhost:8080/songs/genre?genre=${encodeURIComponent(
         selectedGenre
@@ -29,7 +31,8 @@ function GenreTab() {
     )
       .then((res) => res.json())
       .then((data) => setSongs(data))
-      .catch((err) => console.error("Failed to fetch songs:", err));
+      .catch((err) => console.error("Failed to fetch songs:", err))
+      .finally(() => setLoading(false)); // stop loading
   };
 
   // Fetch songs automatically when genre changes
@@ -69,10 +72,7 @@ function GenreTab() {
           ))}
         </select>
 
-        <button
-          onClick={fetchSongsByGenre}
-          style={{ marginLeft: "10px" }}
-        >
+        <button onClick={fetchSongsByGenre} style={{ marginLeft: "10px" }}>
           Refresh Songs
         </button>
       </div>
@@ -92,7 +92,9 @@ function GenreTab() {
         <div>
           <h3>Songs in "{selectedGenre}"</h3>
 
-          {songs.length === 0 ? (
+          {loading ? (
+            <p>Loading songs...</p>
+          ) : songs.length === 0 ? (
             <p>No songs found for this genre.</p>
           ) : (
             <ul style={{ padding: 0, listStyle: "none" }}>
