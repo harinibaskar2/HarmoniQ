@@ -382,6 +382,42 @@ public class Main {
             return gson.toJson(randomSongs);
         });
 
+
+        // reccomendations endpoint 
+        get("/recommendations", (req, res) -> {
+
+            res.type("application/json");
+        
+            String username = req.queryParams("username");
+            if (username == null) return "[]";
+        
+            // 1. get user playlists
+            List<Playlist> playlists = playlistDAO.getPlaylists(username);
+        
+            // 2. build user profile (THIS IS YOUR ML STEP)
+            UserProfile profile =
+                RecommendationService.buildUserProfile(playlists);
+        
+            // 3. find strongest genre
+            String topGenre = profile.getTopGenre();
+        
+            if (topGenre == null) return "[]";
+        
+            // 4. fetch songs matching that genre
+            List<Song> recommendations =
+                MusicBrainzService.fetchSongsByGenre(topGenre);
+        
+            // 5. return top 10
+            Collections.shuffle(recommendations);
+        
+            return new Gson().toJson(
+                recommendations.subList(
+                    0,
+                    Math.min(10, recommendations.size())
+                )
+            );
+        });
+
     } 
 
 } 
