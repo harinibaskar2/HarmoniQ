@@ -1,8 +1,10 @@
 com/harmoniq/Database.class
 com/harmoniq/SongDAO.class
 com/harmoniq/Main$1.class
+com/harmoniq/RecommendationService.class
 com/harmoniq/PlaylistDAO.class
 com/harmoniq/JwtUtil.class
+com/harmoniq/UserProfile.class
 com/harmoniq/User.class
 com/harmoniq/Main.class
 com/harmoniq/Song.class

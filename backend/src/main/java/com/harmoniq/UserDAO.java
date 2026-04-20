@@ -9,7 +9,9 @@ import java.sql.Statement;
 
 public class UserDAO {
 
-    private static final String DB_URL = "jdbc:sqlite:users.db";
+
+    private static final String DB_URL =
+    "jdbc:sqlite:/Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/users.db";
 
     public UserDAO() {
         try (Connection conn = DriverManager.getConnection(DB_URL);

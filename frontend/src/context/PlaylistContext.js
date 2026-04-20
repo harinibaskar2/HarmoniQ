@@ -1,39 +1,72 @@
-// PlaylistContext.js
-import { createContext, useState } from "react";
+import { createContext, useState, useEffect } from "react";
+import axios from "axios";
 
 export const PlaylistContext = createContext();
 
 export const PlaylistProvider = ({ children }) => {
-  const [playlists, setPlaylists] = useState([]); // array of { name, songs: [] }
+  const [playlists, setPlaylists] = useState([]);
 
-  // Add a song to a playlist
-  const addSongToPlaylist = (playlistName, song) => {
-    setPlaylists((prev) => {
-      const existing = prev.find((p) => p.name === playlistName);
+  const username = "sanjay"; // TEMP
 
-      if (existing) {
-        // Add song if it doesn't already exist
-        if (!existing.songs.find((s) => s.id === song.id)) {
-          return prev.map((p) =>
-            p.name === playlistName
-              ? { ...p, songs: [...p.songs, song] }
-              : p
-          );
-        }
-        return prev; // song already exists
-      } else {
-        // Create new playlist
-        return [...prev, { name: playlistName, songs: [song] }];
-      }
-    });
+  const API_BASE = "http://localhost:8080"; // 🔥 IMPORTANT FIX
+
+  // =========================
+  // LOAD PLAYLISTS (BACKEND)
+  // =========================
+  const fetchPlaylists = async () => {
+    try {
+      console.log("🔥 Fetching playlists for:", username);
+
+      const res = await axios.get(`${API_BASE}/playlists`, {
+        params: { username },
+      });
+
+      console.log("🔥 Playlists received:", res.data);
+
+      setPlaylists(res.data);
+    } catch (err) {
+      console.error("❌ Error fetching playlists:", err);
+    }
   };
 
-  // Remove a song from a playlist
+  useEffect(() => {
+    fetchPlaylists();
+  }, []);
+
+  // =========================
+  // ADD SONG (BACKEND)
+  // =========================
+  const addSongToPlaylist = async (playlistName, song) => {
+    console.log("🔥 FRONTEND addSongToPlaylist CALLED");
+    console.log("playlist:", playlistName);
+    console.log("song:", song);
+
+    try {
+      const res = await axios.post(`${API_BASE}/playlists/add`, {
+        username,
+        playlistName,
+        song,
+      });
+
+      console.log("🔥 Backend response:", res.data);
+
+      setPlaylists(res.data);
+    } catch (err) {
+      console.error("❌ Error adding song:", err);
+    }
+  };
+
+  // =========================
+  // REMOVE SONG (LOCAL ONLY)
+  // =========================
   const removeSongFromPlaylist = (playlistName, songId) => {
     setPlaylists((prev) =>
       prev.map((p) =>
         p.name === playlistName
-          ? { ...p, songs: p.songs.filter((song) => song.id !== songId) }
+          ? {
+              ...p,
+              songs: p.songs.filter((song) => song.id !== songId),
+            }
           : p
       )
     );
@@ -41,7 +74,12 @@ export const PlaylistProvider = ({ children }) => {
 
   return (
     <PlaylistContext.Provider
-      value={{ playlists, addSongToPlaylist, removeSongFromPlaylist }}
+      value={{
+        playlists,
+        addSongToPlaylist,
+        removeSongFromPlaylist,
+        refreshPlaylists: fetchPlaylists,
+      }}
     >
       {children}
     </PlaylistContext.Provider>

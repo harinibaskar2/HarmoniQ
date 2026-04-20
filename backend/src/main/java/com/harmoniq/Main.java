@@ -293,62 +293,103 @@ public class Main {
 
       // ---------------- PLAYLIST ENDPOINTS ----------------
 
-        // Add song to playlist
         post("/playlists/add", (req, res) -> {
             res.type("application/json");
-
-            Map<String, Object> body = gson.fromJson(req.body(),
-                    new TypeToken<Map<String, Object>>() {}.getType());
-
-            String username = (String) body.get("username"); // TODO: replace with JWT logic
+        
+            Map<String, Object> body = gson.fromJson(
+                    req.body(),
+                    new TypeToken<Map<String, Object>>() {}.getType()
+            );
+        
+            String username = (String) body.get("username");
             String playlistName = (String) body.get("playlistName");
             Map songMap = (Map) body.get("song");
-
+        
+            // =========================
+            // VALIDATION
+            // =========================
             if (username == null || playlistName == null || songMap == null) {
                 res.status(400);
+        
                 Map<String, String> resp = new HashMap<>();
                 resp.put("status", "error");
                 resp.put("message", "Missing fields");
+        
                 return gson.toJson(resp);
             }
-
-            // safely extract artists and genres
+        
+            // =========================
+            // DEBUG INPUT
+            // =========================
+            System.out.println("=== ADD PLAYLIST REQUEST ===");
+            System.out.println("USERNAME: " + username);
+            System.out.println("PLAYLIST: " + playlistName);
+            System.out.println("SONG MAP: " + songMap);
+        
+            // =========================
+            // EXTRACT DATA
+            // =========================
             List<String> artists = new ArrayList<>();
             if (songMap.get("artists") instanceof List) {
-                for (Object a : (List) songMap.get("artists")) {
+                for (Object a : (List<?>) songMap.get("artists")) {
                     artists.add(a.toString());
                 }
             }
-
+        
             List<String> genres = new ArrayList<>();
             if (songMap.get("genres") instanceof List) {
-                for (Object g : (List) songMap.get("genres")) {
+                for (Object g : (List<?>) songMap.get("genres")) {
                     genres.add(g.toString());
                 }
             }
-
+        
             Song song = new Song(
                     (String) songMap.get("id"),
                     (String) songMap.get("title"),
                     artists,
                     genres
             );
-
-            // ✅ Use instance method
-            playlistDAO.addSong(username, playlistName, song);
-
-            Map<String, String> resp = new HashMap<>();
-            resp.put("status", "success");
-            return gson.toJson(resp);
+        
+            System.out.println("CREATED SONG: " + song.getTitle());
+        
+            // =========================
+            // SAVE TO DB
+            // =========================
+            try {
+                playlistDAO.addSong(username, playlistName, song);
+                System.out.println("✅ INSERT SUCCESS");
+            } catch (Exception e) {
+                System.out.println("❌ INSERT FAILED");
+                e.printStackTrace();
+            }
+        
+            // =========================
+            // VERIFY DB AFTER INSERT
+            // =========================
+            List<Playlist> updatedPlaylists = playlistDAO.getPlaylists(username);
+        
+            System.out.println("AFTER INSERT PLAYLIST COUNT: " + updatedPlaylists.size());
+        
+            // EXTRA DEBUG (VERY IMPORTANT)
+            if (updatedPlaylists.isEmpty()) {
+                System.out.println("❌ STILL EMPTY AFTER INSERT → DB ISSUE");
+            }
+        
+            return gson.toJson(updatedPlaylists);
         });
+
 
         // Get all playlists for a user
         get("/playlists", (req, res) -> {
             res.type("application/json");
-            String username = req.queryParams("username"); // TODO: replace with JWT logic
-            if (username == null) return "[]";
 
-            // ✅ Use instance method
+            String username = req.queryParams("username");
+
+            if (username == null) {
+                res.status(400);
+                return gson.toJson(new ArrayList<>());
+            }
+
             List<Playlist> playlists = playlistDAO.getPlaylists(username);
             return gson.toJson(playlists);
         });
@@ -383,31 +424,53 @@ public class Main {
         });
 
 
-        // reccomendations endpoint 
         get("/recommendations", (req, res) -> {
 
             res.type("application/json");
         
             String username = req.queryParams("username");
-            if (username == null) return "[]";
         
-            // 1. get user playlists
+            if (username == null || username.trim().isEmpty()) {
+                return "[]";
+            }
+        
+            // 1. get playlists
             List<Playlist> playlists = playlistDAO.getPlaylists(username);
         
-            // 2. build user profile (THIS IS YOUR ML STEP)
+            System.out.println("USER: " + username);
+            System.out.println("Playlists: " + playlists.size());
+        
+            if (playlists.isEmpty()) {
+                System.out.println("❌ No playlists found");
+                return "[]";
+            }
+        
+            // 2. build profile
             UserProfile profile =
                 RecommendationService.buildUserProfile(playlists);
         
-            // 3. find strongest genre
+            // 3. top genre
             String topGenre = profile.getTopGenre();
         
-            if (topGenre == null) return "[]";
+            System.out.println("Top Genre: " + topGenre);
         
-            // 4. fetch songs matching that genre
+            if (topGenre == null) {
+                System.out.println("❌ No genre found in user profile");
+                return "[]";
+            }
+        
+            // 4. fetch recommendations
             List<Song> recommendations =
                 MusicBrainzService.fetchSongsByGenre(topGenre);
         
-            // 5. return top 10
+            System.out.println("Recommendations: " +
+                (recommendations == null ? 0 : recommendations.size()));
+        
+            if (recommendations == null || recommendations.isEmpty()) {
+                System.out.println("❌ No recommendations returned");
+                return "[]";
+            }
+        
             Collections.shuffle(recommendations);
         
             return new Gson().toJson(
@@ -418,6 +481,5 @@ public class Main {
             );
         });
 
-    } 
-
+    }
 } 

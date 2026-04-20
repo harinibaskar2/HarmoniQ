@@ -3,6 +3,12 @@ package com.harmoniq;
 import java.util.HashMap;
 import java.util.Map;
 
+
+// Simple user profile to track genre preferences
+// adds genre to the profile and counts how many times each genre has been added
+
+
+
 public class UserProfile {
 
     private Map<String, Integer> genreCount = new HashMap<>();
@@ -25,5 +31,7 @@ public class UserProfile {
         return topGenre;
     }
 }
+
+
 
 
