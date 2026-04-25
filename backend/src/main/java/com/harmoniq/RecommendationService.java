@@ -1,32 +1,47 @@
 package com.harmoniq;
 
+import java.util.ArrayList;
 import java.util.List;
-
-// this builds the user profile for each user 
-
 
 public class RecommendationService {
 
     public static UserProfile buildUserProfile(List<Playlist> playlists) {
+
         UserProfile profile = new UserProfile();
 
         for (Playlist p : playlists) {
             for (Song s : p.getSongs()) {
-        
-                System.out.println("Song: " + s.getTitle());
-                System.out.println("Genres: " + s.getGenres());
-        
-                for (String g : s.getGenres()) {
-                    profile.addGenre(g);
+
+                List<String> artists = s.getArtists();
+
+                if (artists != null) {
+                    for (String artist : artists) {
+                        profile.addArtist(artist);
+                    }
                 }
             }
         }
 
         return profile;
     }
-}
 
+    public static List<Song> recommend(UserProfile profile) {
 
+        List<Song> results = new ArrayList<>();
+    
+        String topArtist = profile.getTopArtist();
+    
+        if (topArtist == null) return results;
+    
+        List<Song> songs =
+            MusicBrainzService.fetchSongsByArtistName(topArtist);
+    
+        results.addAll(songs);
+    
+        return results;
+    }
+
+} 
 
 
 

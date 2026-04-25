@@ -3,35 +3,26 @@ package com.harmoniq;
 import java.util.HashMap;
 import java.util.Map;
 
-
-// Simple user profile to track genre preferences
-// adds genre to the profile and counts how many times each genre has been added
-
-
-
 public class UserProfile {
 
-    private Map<String, Integer> genreCount = new HashMap<>();
+    // artist -> weight (how much user likes them)
+    private Map<String, Integer> artistWeights = new HashMap<>();
 
-    public void addGenre(String genre) {
-        genreCount.put(genre, genreCount.getOrDefault(genre, 0) + 1);
+    public void addArtist(String artist) {
+        artistWeights.put(artist,
+                artistWeights.getOrDefault(artist, 0) + 1);
     }
 
-    public String getTopGenre() {
-        String topGenre = null;
-        int max = 0;
+    public Map<String, Integer> getArtistWeights() {
+        return artistWeights;
+    }
 
-        for (Map.Entry<String, Integer> entry : genreCount.entrySet()) {
-            if (entry.getValue() > max) {
-                max = entry.getValue();
-                topGenre = entry.getKey();
-            }
-        }
-
-        return topGenre;
+    public String getTopArtist() {
+        return artistWeights.entrySet()
+                .stream()
+                .max((a, b) -> a.getValue() - b.getValue())
+                .map(Map.Entry::getKey)
+                .orElse(null);
     }
 }
-
-
-
 

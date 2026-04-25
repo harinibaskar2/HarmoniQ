@@ -395,34 +395,7 @@ public class Main {
         });
 
 
-                // ---------------- GENRES DROPDOWN ----------------
-        get("/genres", (req, res) -> {
-            res.type("application/json");
-            List<String> genres = MusicBrainzService.getAllGenres();
-            return gson.toJson(genres);
-        });
-
-        get("/songs/genre", (req, res) -> {
-            res.type("application/json");
-        
-            String genre = req.queryParams("genre");
-        
-            if (genre == null || genre.isEmpty()) {
-                return "[]";
-            }
-        
-            List<Song> songs = MusicBrainzService.fetchSongsByGenre(genre);
-        
-            // ⭐ Randomize results so refresh shows new songs
-            Collections.shuffle(songs);
-        
-            // ⭐ Return only first 10 songs to keep UI clean
-            int limit = Math.min(10, songs.size());
-            List<Song> randomSongs = songs.subList(0, limit);
-        
-            return gson.toJson(randomSongs);
-        });
-
+       
 
         get("/recommendations", (req, res) -> {
 
@@ -434,52 +407,46 @@ public class Main {
                 return "[]";
             }
         
-            // 1. get playlists
+            System.out.println("\n=== RECOMMENDATIONS DEBUG ===");
+            System.out.println("USER: " + username);
+        
+            // 1. Get playlists
             List<Playlist> playlists = playlistDAO.getPlaylists(username);
         
-            System.out.println("USER: " + username);
-            System.out.println("Playlists: " + playlists.size());
+            System.out.println("PLAYLIST COUNT: " + playlists.size());
         
             if (playlists.isEmpty()) {
                 System.out.println("❌ No playlists found");
                 return "[]";
             }
         
-            // 2. build profile
+            // 2. Build profile
             UserProfile profile =
-                RecommendationService.buildUserProfile(playlists);
+                    RecommendationService.buildUserProfile(playlists);
         
-            // 3. top genre
-            String topGenre = profile.getTopGenre();
+            System.out.println("TOP ARTISTS: " + profile.getTopArtist());
         
-            System.out.println("Top Genre: " + topGenre);
-        
-            if (topGenre == null) {
-                System.out.println("❌ No genre found in user profile");
-                return "[]";
-            }
-        
-            // 4. fetch recommendations
+            // 3. Generate recommendations
             List<Song> recommendations =
-                MusicBrainzService.fetchSongsByGenre(topGenre);
+                    RecommendationService.recommend(profile);
         
-            System.out.println("Recommendations: " +
-                (recommendations == null ? 0 : recommendations.size()));
+            System.out.println("RECOMMENDATIONS SIZE: " +
+                    (recommendations == null ? 0 : recommendations.size()));
         
             if (recommendations == null || recommendations.isEmpty()) {
-                System.out.println("❌ No recommendations returned");
+                System.out.println("❌ No recommendations generated");
                 return "[]";
             }
         
-            Collections.shuffle(recommendations);
+            // 4. Print sample recommendations
+            for (Song s : recommendations) {
+                System.out.println("➡ " + s.getTitle() +
+                        " | " + s.getArtists());
+            }
         
-            return new Gson().toJson(
-                recommendations.subList(
-                    0,
-                    Math.min(10, recommendations.size())
-                )
-            );
+            return new Gson().toJson(recommendations);
         });
 
-    }
+    } 
 } 
+
