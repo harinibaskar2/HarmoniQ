@@ -21,6 +21,7 @@ const Login = ({ onLogin }) => {
       const data = await res.json();
       if (data.status === "success") {
         localStorage.setItem("token", data.token);
+        
         setMessage("Login successful!");
         onLogin();
       } else {

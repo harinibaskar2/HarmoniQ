@@ -21,7 +21,6 @@ public class MusicBrainzService {
     // FETCH ARTIST
     // =====================================================
     public static Artist fetchArtist(String artistName) {
-
         try {
             String urlStr =
                 "https://musicbrainz.org/ws/2/artist/?query=artist:" +
@@ -29,15 +28,12 @@ public class MusicBrainzService {
                 "&fmt=json&limit=1";
 
             String response = sendGet(urlStr);
-
             JsonObject json = JsonParser.parseString(response).getAsJsonObject();
 
             if (json.has("artists")) {
-
                 JsonArray artists = json.getAsJsonArray("artists");
 
                 if (artists.size() > 0) {
-
                     JsonObject artist = artists.get(0).getAsJsonObject();
 
                     String name = artist.has("name") ? artist.get("name").getAsString() : null;
@@ -70,7 +66,6 @@ public class MusicBrainzService {
                 "&fmt=json&limit=50";
 
             String response = sendGet(urlStr);
-
             JsonObject json = JsonParser.parseString(response).getAsJsonObject();
 
             if (json.has("recordings")) {
@@ -86,17 +81,13 @@ public class MusicBrainzService {
 
                     if (id == null || title == null) continue;
 
-                    // =====================================================
-                    // FIX: EXTRACT ARTIST PROPERLY
-                    // =====================================================
+                    // ❌ DO NOT FORCE "Unknown Artist"
                     List<String> artists = new ArrayList<>();
 
                     if (rec.has("artist-credit")) {
-
                         JsonArray artistCredit = rec.getAsJsonArray("artist-credit");
 
                         for (JsonElement acElem : artistCredit) {
-
                             JsonObject ac = acElem.getAsJsonObject();
 
                             if (ac.has("name")) {
@@ -105,16 +96,14 @@ public class MusicBrainzService {
                         }
                     }
 
-                    // fallback if API gives nothing
-                    if (artists.isEmpty()) {
-                        artists.add("Unknown Artist");
-                    }
+                    // ✅ If no artist → just skip adding artist info
+                    // (frontend will only show song title)
 
                     songs.add(new Song(
                         id,
                         title,
-                        artists,
-                        new ArrayList<>() // genres disabled for now
+                        artists,          // may be empty
+                        new ArrayList<>()
                     ));
                 }
             }
@@ -140,7 +129,6 @@ public class MusicBrainzService {
                 "&fmt=json&limit=50";
 
             String response = sendGet(urlStr);
-
             JsonObject json = JsonParser.parseString(response).getAsJsonObject();
 
             if (json.has("recordings")) {
@@ -159,21 +147,15 @@ public class MusicBrainzService {
                     List<String> artists = new ArrayList<>();
 
                     if (rec.has("artist-credit")) {
-
                         JsonArray artistCredit = rec.getAsJsonArray("artist-credit");
 
                         for (JsonElement acElem : artistCredit) {
-
                             JsonObject ac = acElem.getAsJsonObject();
 
                             if (ac.has("name")) {
                                 artists.add(ac.get("name").getAsString());
                             }
                         }
-                    }
-
-                    if (artists.isEmpty()) {
-                        artists.add("Unknown Artist");
                     }
 
                     songs.add(new Song(
@@ -193,7 +175,7 @@ public class MusicBrainzService {
     }
 
     // =====================================================
-    // FETCH SONGS BY ARTIST NAME
+    // FETCH BY ARTIST NAME
     // =====================================================
     public static List<Song> fetchSongsByArtistName(String artistName) {
 
@@ -207,7 +189,7 @@ public class MusicBrainzService {
     }
 
     // =====================================================
-    // SAFE HTTP REQUEST
+    // HTTP REQUEST
     // =====================================================
     private static String sendGet(String urlStr) throws Exception {
 
@@ -217,10 +199,8 @@ public class MusicBrainzService {
         conn.setRequestMethod("GET");
         conn.setRequestProperty("User-Agent", USER_AGENT);
 
-        int responseCode = conn.getResponseCode();
-
-        if (responseCode != 200) {
-            throw new RuntimeException("MusicBrainz error: " + responseCode);
+        if (conn.getResponseCode() != 200) {
+            throw new RuntimeException("MusicBrainz error: " + conn.getResponseCode());
         }
 
         BufferedReader in = new BufferedReader(
@@ -239,6 +219,4 @@ public class MusicBrainzService {
 
         return content.toString();
     }
-
-    
 }

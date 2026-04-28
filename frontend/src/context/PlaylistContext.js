@@ -4,14 +4,15 @@ import axios from "axios";
 export const PlaylistContext = createContext();
 
 export const PlaylistProvider = ({ children }) => {
+  const API_BASE = "http://localhost:8080";
+
+  const username = "sanjay"; // TEMP (as you said for now)
+
   const [playlists, setPlaylists] = useState([]);
-
-  const username = "sanjay"; // TEMP
-
-  const API_BASE = "http://localhost:8080"; // 🔥 IMPORTANT FIX
+  const [recommendations, setRecommendations] = useState([]);
 
   // =========================
-  // LOAD PLAYLISTS (BACKEND)
+  // LOAD PLAYLISTS
   // =========================
   const fetchPlaylists = async () => {
     try {
@@ -21,34 +22,55 @@ export const PlaylistProvider = ({ children }) => {
         params: { username },
       });
 
-      console.log("🔥 Playlists received:", res.data);
-
       setPlaylists(res.data);
     } catch (err) {
       console.error("❌ Error fetching playlists:", err);
     }
   };
 
+  // =========================
+  // LOAD RECOMMENDATIONS
+  // =========================
+  const fetchRecommendations = async () => {
+    try {
+      console.log("🔥 Fetching recommendations for:", username);
+
+      const res = await axios.get(`${API_BASE}/recommendations`, {
+        params: { username },
+      });
+
+      console.log("🔥 Recommendations received:", res.data);
+
+      setRecommendations(res.data);
+    } catch (err) {
+      console.error("❌ Error fetching recommendations:", err);
+    }
+  };
+
+  // =========================
+  // INITIAL LOAD
+  // =========================
   useEffect(() => {
     fetchPlaylists();
   }, []);
 
+  // 🔥 refresh recommendations whenever playlists change
+  useEffect(() => {
+    fetchRecommendations();
+  }, [playlists]);
+
   // =========================
-  // ADD SONG (BACKEND)
+  // ADD SONG
   // =========================
   const addSongToPlaylist = async (playlistName, song) => {
-    console.log("🔥 FRONTEND addSongToPlaylist CALLED");
-    console.log("playlist:", playlistName);
-    console.log("song:", song);
-
     try {
+      console.log("🔥 Adding song:", song);
+
       const res = await axios.post(`${API_BASE}/playlists/add`, {
         username,
         playlistName,
         song,
       });
-
-      console.log("🔥 Backend response:", res.data);
 
       setPlaylists(res.data);
     } catch (err) {
@@ -57,7 +79,7 @@ export const PlaylistProvider = ({ children }) => {
   };
 
   // =========================
-  // REMOVE SONG (LOCAL ONLY)
+  // REMOVE SONG
   // =========================
   const removeSongFromPlaylist = (playlistName, songId) => {
     setPlaylists((prev) =>
@@ -72,13 +94,18 @@ export const PlaylistProvider = ({ children }) => {
     );
   };
 
+  // =========================
+  // CONTEXT VALUE
+  // =========================
   return (
     <PlaylistContext.Provider
       value={{
         playlists,
+        recommendations,          // 🔥 IMPORTANT
         addSongToPlaylist,
         removeSongFromPlaylist,
         refreshPlaylists: fetchPlaylists,
+        refreshRecommendations: fetchRecommendations,
       }}
     >
       {children}
