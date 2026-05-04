@@ -7,7 +7,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class PlaylistDAO {
@@ -93,11 +92,15 @@ public class PlaylistDAO {
 
                         System.out.println("SONG FOUND → " + rsSongs.getString("song_title"));
 
+                        List<String> artists = new ArrayList<>();
+                        artists.add(rsSongs.getString("artist"));
+                        
                         Song song = new Song(
                             rsSongs.getString("song_mbid"),
                             rsSongs.getString("song_title"),
-                            Collections.singletonList(rsSongs.getString("artist")),
-                            new ArrayList<>()
+                            artists,
+                            new ArrayList<>(),   // genres
+                            new ArrayList<>()    // relatedArtists
                         );
 
                         playlist.addSong(song);
@@ -242,3 +245,4 @@ public class PlaylistDAO {
         }
     }
 }
+

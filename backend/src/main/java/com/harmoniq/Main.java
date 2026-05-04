@@ -347,7 +347,9 @@ public class Main {
                     (String) songMap.get("id"),
                     (String) songMap.get("title"),
                     artists,
-                    genres
+                    genres,
+                    new ArrayList<>()
+                
             );
         
             System.out.println("CREATED SONG: " + song.getTitle());

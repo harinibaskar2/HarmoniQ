@@ -21,19 +21,22 @@ public class MusicBrainzService {
     // FETCH ARTIST
     // =====================================================
     public static Artist fetchArtist(String artistName) {
+
         try {
             String urlStr =
-                "https://musicbrainz.org/ws/2/artist/?query=artist:" +
-                URLEncoder.encode(artistName, "UTF-8") +
-                "&fmt=json&limit=1";
+                    "https://musicbrainz.org/ws/2/artist/?query=artist:" +
+                            URLEncoder.encode(artistName, "UTF-8") +
+                            "&fmt=json&limit=1";
 
             String response = sendGet(urlStr);
             JsonObject json = JsonParser.parseString(response).getAsJsonObject();
 
             if (json.has("artists")) {
+
                 JsonArray artists = json.getAsJsonArray("artists");
 
                 if (artists.size() > 0) {
+
                     JsonObject artist = artists.get(0).getAsJsonObject();
 
                     String name = artist.has("name") ? artist.get("name").getAsString() : null;
@@ -53,59 +56,61 @@ public class MusicBrainzService {
     }
 
     // =====================================================
-    // FETCH SONGS BY ARTIST MBID
+    // FETCH SONGS BY ARTIST MBID (CONTENT BASED CORE)
     // =====================================================
     public static List<Song> fetchSongs(String mbid) {
 
         List<Song> songs = new ArrayList<>();
 
         try {
+
+            // ✅ ONE related artist list per main artist
+            List<String> relatedArtists = fetchRelatedArtists(mbid);
+
             String urlStr =
-                "https://musicbrainz.org/ws/2/recording?artist=" +
-                mbid +
-                "&fmt=json&limit=50";
+                    "https://musicbrainz.org/ws/2/recording?artist=" +
+                            mbid +
+                            "&fmt=json&limit=50";
 
             String response = sendGet(urlStr);
             JsonObject json = JsonParser.parseString(response).getAsJsonObject();
 
-            if (json.has("recordings")) {
+            if (!json.has("recordings")) return songs;
 
-                JsonArray recordings = json.getAsJsonArray("recordings");
+            JsonArray recordings = json.getAsJsonArray("recordings");
 
-                for (JsonElement recElem : recordings) {
+            for (JsonElement recElem : recordings) {
 
-                    JsonObject rec = recElem.getAsJsonObject();
+                JsonObject rec = recElem.getAsJsonObject();
 
-                    String id = rec.has("id") ? rec.get("id").getAsString() : null;
-                    String title = rec.has("title") ? rec.get("title").getAsString() : null;
+                String id = rec.has("id") ? rec.get("id").getAsString() : null;
+                String title = rec.has("title") ? rec.get("title").getAsString() : null;
 
-                    if (id == null || title == null) continue;
+                if (id == null || title == null) continue;
 
-                    // ❌ DO NOT FORCE "Unknown Artist"
-                    List<String> artists = new ArrayList<>();
+                List<String> artists = new ArrayList<>();
 
-                    if (rec.has("artist-credit")) {
-                        JsonArray artistCredit = rec.getAsJsonArray("artist-credit");
+                if (rec.has("artist-credit")) {
 
-                        for (JsonElement acElem : artistCredit) {
-                            JsonObject ac = acElem.getAsJsonObject();
+                    JsonArray artistCredit = rec.getAsJsonArray("artist-credit");
 
-                            if (ac.has("name")) {
-                                artists.add(ac.get("name").getAsString());
-                            }
+                    for (JsonElement acElem : artistCredit) {
+
+                        JsonObject ac = acElem.getAsJsonObject();
+
+                        if (ac.has("name")) {
+                            artists.add(ac.get("name").getAsString());
                         }
                     }
+                }
 
-                    // ✅ If no artist → just skip adding artist info
-                    // (frontend will only show song title)
-
-                    songs.add(new Song(
+                songs.add(new Song(
                         id,
                         title,
-                        artists,          // may be empty
-                        new ArrayList<>()
-                    ));
-                }
+                        artists,
+                        new ArrayList<>(),
+                        relatedArtists
+                ));
             }
 
         } catch (Exception e) {
@@ -123,48 +128,60 @@ public class MusicBrainzService {
         List<Song> songs = new ArrayList<>();
 
         try {
+
             String urlStr =
-                "https://musicbrainz.org/ws/2/recording/?query=recording:" +
-                URLEncoder.encode(title, "UTF-8") +
-                "&fmt=json&limit=50";
+                    "https://musicbrainz.org/ws/2/recording/?query=recording:" +
+                            URLEncoder.encode(title, "UTF-8") +
+                            "&fmt=json&limit=50";
 
             String response = sendGet(urlStr);
             JsonObject json = JsonParser.parseString(response).getAsJsonObject();
 
-            if (json.has("recordings")) {
+            if (!json.has("recordings")) return songs;
 
-                JsonArray recordings = json.getAsJsonArray("recordings");
+            JsonArray recordings = json.getAsJsonArray("recordings");
 
-                for (JsonElement recElem : recordings) {
+            for (JsonElement recElem : recordings) {
 
-                    JsonObject rec = recElem.getAsJsonObject();
+                JsonObject rec = recElem.getAsJsonObject();
 
-                    String id = rec.has("id") ? rec.get("id").getAsString() : null;
-                    String songTitle = rec.has("title") ? rec.get("title").getAsString() : null;
+                String id = rec.has("id") ? rec.get("id").getAsString() : null;
+                String songTitle = rec.has("title") ? rec.get("title").getAsString() : null;
 
-                    if (id == null || songTitle == null) continue;
+                if (id == null || songTitle == null) continue;
 
-                    List<String> artists = new ArrayList<>();
+                List<String> artists = new ArrayList<>();
 
-                    if (rec.has("artist-credit")) {
-                        JsonArray artistCredit = rec.getAsJsonArray("artist-credit");
+                if (rec.has("artist-credit")) {
 
-                        for (JsonElement acElem : artistCredit) {
-                            JsonObject ac = acElem.getAsJsonObject();
+                    JsonArray artistCredit = rec.getAsJsonArray("artist-credit");
 
-                            if (ac.has("name")) {
-                                artists.add(ac.get("name").getAsString());
-                            }
+                    for (JsonElement acElem : artistCredit) {
+
+                        JsonObject ac = acElem.getAsJsonObject();
+
+                        if (ac.has("name")) {
+                            artists.add(ac.get("name").getAsString());
                         }
                     }
+                }
 
-                    songs.add(new Song(
+                List<String> relatedArtists = new ArrayList<>();
+
+                if (!artists.isEmpty()) {
+                    Artist a = fetchArtist(artists.get(0));
+                    if (a != null) {
+                        relatedArtists = fetchRelatedArtists(a.getMbid());
+                    }
+                }
+
+                songs.add(new Song(
                         id,
                         songTitle,
                         artists,
-                        new ArrayList<>()
-                    ));
-                }
+                        new ArrayList<>(),
+                        relatedArtists
+                ));
             }
 
         } catch (Exception e) {
@@ -175,7 +192,7 @@ public class MusicBrainzService {
     }
 
     // =====================================================
-    // FETCH BY ARTIST NAME
+    // FETCH BY ARTIST NAME (WRAPPER)
     // =====================================================
     public static List<Song> fetchSongsByArtistName(String artistName) {
 
@@ -186,6 +203,52 @@ public class MusicBrainzService {
         }
 
         return fetchSongs(artist.getMbid());
+    }
+
+    // =====================================================
+    // FETCH RELATED ARTISTS (SIMPLE RELATION SIGNAL)
+    // =====================================================
+    public static List<String> fetchRelatedArtists(String artistMbid) {
+
+        List<String> related = new ArrayList<>();
+
+        try {
+
+            String urlStr =
+                    "https://musicbrainz.org/ws/2/artist/" +
+                            artistMbid +
+                            "?inc=artist-rels&fmt=json";
+
+            String response = sendGet(urlStr);
+            JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+            if (!json.has("relations")) return related;
+
+            JsonArray relations = json.getAsJsonArray("relations");
+
+            for (JsonElement elem : relations) {
+
+                JsonObject rel = elem.getAsJsonObject();
+
+                if (!rel.has("artist")) continue;
+
+                JsonObject artistObj = rel.getAsJsonObject("artist");
+
+                if (artistObj.has("name")) {
+
+                    String name = artistObj.get("name").getAsString();
+
+                    if (!related.contains(name)) {
+                        related.add(name);
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ fetchRelatedArtists failed: " + e.getMessage());
+        }
+
+        return related;
     }
 
     // =====================================================
@@ -204,7 +267,7 @@ public class MusicBrainzService {
         }
 
         BufferedReader in = new BufferedReader(
-            new InputStreamReader(conn.getInputStream())
+                new InputStreamReader(conn.getInputStream())
         );
 
         StringBuilder content = new StringBuilder();
@@ -220,3 +283,5 @@ public class MusicBrainzService {
         return content.toString();
     }
 }
+
+

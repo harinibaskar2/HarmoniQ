@@ -7,14 +7,16 @@ public class Song {
     private String title;
     private List<String> artists;
     private List<String> genres;
+    private List<String> relatedArtists;
 
     public Song() {}
 
-    public Song(String id, String title, List<String> artists, List<String> genres) {
+    public Song(String id, String title, List<String> artists, List<String> genres, List<String> relatedArtists) {
         this.id = id;
         this.title = title;
         this.artists = artists;
         this.genres = genres;
+        this.relatedArtists = relatedArtists;
     }
 
     public String getId() { return id; }
@@ -28,4 +30,13 @@ public class Song {
 
     public List<String> getGenres() { return genres; }
     public void setGenres(List<String> genres) { this.genres = genres; }
+
+    public List<String> getRelatedArtists() { 
+        return relatedArtists; 
+    }
+    public void setRelatedArtists(List<String> relatedArtists) {
+        this.relatedArtists = relatedArtists;
+    }
 }
+
+

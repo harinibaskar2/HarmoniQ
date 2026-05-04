@@ -31,6 +31,7 @@ public class SongDAO {
                     rs.getString("mbid"),
                     rs.getString("title"),
                     artists,
+                    new ArrayList<>(), 
                     new ArrayList<>()
             ));
         }
@@ -62,6 +63,7 @@ public class SongDAO {
                     rs.getString("mbid"),
                     rs.getString("title"),
                     artists,
+                    new ArrayList<>(), 
                     new ArrayList<>()
             ));
         }
