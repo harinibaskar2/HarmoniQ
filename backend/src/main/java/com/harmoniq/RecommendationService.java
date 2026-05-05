@@ -2,6 +2,7 @@ package com.harmoniq;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,44 +51,45 @@ public class RecommendationService {
     // ==================================
     public static List<Song> recommend(UserProfile profile) {
 
-        Map<String, Double> songScores = new HashMap<>();
+    Map<String, Double> songScores = new HashMap<>();
+    Map<String, Song> uniqueSongs = new HashMap<>();
 
-        Map<String, Integer> direct = profile.getArtistWeights();
-        Map<String, Integer> related = profile.getRelatedArtistWeights();
+    Map<String, Integer> direct = profile.getArtistWeights();
+    Map<String, Integer> related = profile.getRelatedArtistWeights();
 
-        // DIRECT ARTISTS
-        scoreSongs(direct, DIRECT_WEIGHT, songScores);
+    Set<String> allArtists = new HashSet<>();
+    allArtists.addAll(direct.keySet());
+    allArtists.addAll(related.keySet());
 
-        // RELATED ARTISTS
-        scoreSongs(related, RELATED_WEIGHT, songScores);
+    for (String artist : allArtists) {
 
-        // COLLECT UNIQUE SONGS
-        Map<String, Song> uniqueSongs = new HashMap<>();
+        List<Song> songs = MusicBrainzService.fetchSongsByArtistName(artist);
 
-        collectSongs(direct.keySet(), uniqueSongs);
-        collectSongs(related.keySet(), uniqueSongs);
+        double weight = direct.getOrDefault(artist, 0) * DIRECT_WEIGHT +
+                        related.getOrDefault(artist, 0) * RELATED_WEIGHT;
 
-        List<Song> ranked = new ArrayList<>(uniqueSongs.values());
+        for (Song s : songs) {
 
-        // SORT BY SCORE
-        ranked.sort((a, b) ->
-                Double.compare(
-                        songScores.getOrDefault(b.getId(), 0.0),
-                        songScores.getOrDefault(a.getId(), 0.0)
-                )
-        );
+            songScores.put(
+                    s.getId(),
+                    songScores.getOrDefault(s.getId(), 0.0) + weight
+            );
 
-        // LIMIT RESULTS
-        if (ranked.size() > LIMIT) {
-            ranked = ranked.subList(0, LIMIT);
+            uniqueSongs.put(s.getId(), s);
         }
-
-        // CACHE RESULT
-        cachedRecommendations = ranked;
-        cachedProfile = profile;
-
-        return ranked;
     }
+
+    List<Song> ranked = new ArrayList<>(uniqueSongs.values());
+
+    ranked.sort((a, b) ->
+            Double.compare(
+                    songScores.getOrDefault(b.getId(), 0.0),
+                    songScores.getOrDefault(a.getId(), 0.0)
+            )
+    );
+
+    return ranked.size() > LIMIT ? ranked.subList(0, LIMIT) : ranked;
+}
 
     // ==================================
     // REFRESH RECOMMENDATIONS (NEW)

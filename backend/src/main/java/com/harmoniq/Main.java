@@ -342,13 +342,20 @@ public class Main {
                     genres.add(g.toString());
                 }
             }
+
+            List<String> relatedArtists = new ArrayList<>();
+            if (songMap.get("relatedArtists") instanceof List) {
+                for (Object r : (List<?>) songMap.get("relatedArtists")) {
+                    relatedArtists.add(r.toString());
+                }
+            }
         
             Song song = new Song(
                     (String) songMap.get("id"),
                     (String) songMap.get("title"),
                     artists,
                     genres,
-                    new ArrayList<>()
+                    relatedArtists
                 
             );
         
@@ -442,8 +449,7 @@ public class Main {
         
             // 4. Print sample recommendations
             for (Song s : recommendations) {
-                System.out.println("➡ " + s.getTitle() +
-                        " | " + s.getArtists());
+                System.out.println("➡ " + s.getTitle());
             }
         
             return new Gson().toJson(recommendations);

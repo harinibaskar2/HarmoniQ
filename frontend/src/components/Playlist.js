@@ -102,42 +102,44 @@ const Playlist = () => {
       )}
 
       {/* ================= RECOMMENDATIONS ================= */}
-      <div style={{ marginTop: "40px" }}>
-        <h2>Recommended for You 🔥</h2>
+{/* ================= RECOMMENDATIONS ================= */}
+    <div style={{ marginTop: "40px" }}>
+      <h2>Recommended for You 🔥</h2>
 
-        {recommendations.length === 0 ? (
-          <p className="no-songs">No recommendations yet</p>
-        ) : (
-          <ul className="songs-list">
-            {recommendations.map((song) => (
-              <li key={song.id} className="song-item">
-                <span>
-                  {song.title} — {song.artists?.join(", ")}
-                </span>
+      {recommendations.length === 0 ? (
+        <p className="no-songs">No recommendations yet</p>
+      ) : (
+        <ul className="songs-list">
+          {recommendations.map((song) => (
+            <li key={song.id} className="song-item">
 
-                {/* ➕ ADD BUTTON */}
-                <button
-                  className="add-btn"
-                  onClick={() => {
-                    const playlistName = prompt(
-                      "Add to which playlist?"
-                    );
+              {/* ✅ CLEAN DISPLAY: ONLY TITLE */}
+              <span>
+                {song.title}
+              </span>
 
-                    if (!playlistName) return;
+              {/* ➕ ADD BUTTON */}
+              <button
+                className="add-btn"
+                onClick={() => {
+                  const playlistName = prompt("Add to which playlist?");
 
-                    addSongToPlaylist(playlistName, song);
+                  if (!playlistName) return;
 
-                    // refresh recommendations after adding
-                    fetchRecommendations();
-                  }}
-                >
-                  + Add
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                  addSongToPlaylist(playlistName, song);
+
+                  // refresh recommendations after adding
+                  fetchRecommendations();
+                }}
+              >
+                + Add
+              </button>
+
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
     </div>
   );
 };
