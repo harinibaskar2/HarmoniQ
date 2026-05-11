@@ -19,32 +19,33 @@ public class PlaylistDAO {
              Statement stmt = conn.createStatement()) {
 
             // ======================
-            // PLAYLISTS TABLE
+            // PLAYLIST TABLE
             // ======================
-            String sql =
-                "CREATE TABLE IF NOT EXISTS playlists (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                "username TEXT NOT NULL," +
-                "name TEXT NOT NULL," +
-                "UNIQUE(username, name)" +
-                ")";
+            String playlistsTable =
+                    "CREATE TABLE IF NOT EXISTS playlists (" +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                            "username TEXT NOT NULL," +
+                            "name TEXT NOT NULL," +
+                            "UNIQUE(username, name)" +
+                            ")";
 
-            stmt.execute(sql);
+            stmt.execute(playlistsTable);
 
             // ======================
-            // SONGS TABLE (NO GENRES)
+            // SONGS TABLE
             // ======================
-            String sqlSongs =
-                "CREATE TABLE IF NOT EXISTS playlist_songs (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                "playlist_id INTEGER NOT NULL," +
-                "song_mbid TEXT NOT NULL," +
-                "song_title TEXT NOT NULL," +
-                "artist TEXT," +
-                "FOREIGN KEY(playlist_id) REFERENCES playlists(id)" +
-                ")";
+            String songsTable =
+                    "CREATE TABLE IF NOT EXISTS playlist_songs (" +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                            "playlist_id INTEGER NOT NULL," +
+                            "song_mbid TEXT," +
+                            "song_title TEXT NOT NULL," +
+                            "artist TEXT," +
+                            "genres TEXT," +
+                            "FOREIGN KEY(playlist_id) REFERENCES playlists(id)" +
+                            ")";
 
-            stmt.execute(sqlSongs);
+            stmt.execute(songsTable);
 
             System.out.println("✅ Tables initialized");
 
@@ -71,18 +72,14 @@ public class PlaylistDAO {
 
             while (rs.next()) {
 
-                Playlist playlist = new Playlist(rs.getString("name"));
                 int playlistId = rs.getInt("id");
+                Playlist playlist = new Playlist(rs.getString("name"));
 
-                System.out.println("Playlist found: " + playlist.getName() + " (id=" + playlistId + ")");
+                System.out.println("Playlist found: " + playlist.getName());
 
-                // ======================
-                // GET SONGS
-                // ======================
-                String sqlSongs =
-                    "SELECT * FROM playlist_songs WHERE playlist_id = ?";
+                String songSql = "SELECT * FROM playlist_songs WHERE playlist_id = ?";
 
-                try (PreparedStatement psSongs = conn.prepareStatement(sqlSongs)) {
+                try (PreparedStatement psSongs = conn.prepareStatement(songSql)) {
 
                     psSongs.setInt(1, playlistId);
 
@@ -90,30 +87,36 @@ public class PlaylistDAO {
 
                     while (rsSongs.next()) {
 
-                        System.out.println("SONG FOUND → " + rsSongs.getString("song_title"));
-
                         List<String> artists = new ArrayList<>();
                         artists.add(rsSongs.getString("artist"));
-                        
+
+                        List<String> genres = new ArrayList<>();
+
+                        String genreStr = rsSongs.getString("genres");
+                        if (genreStr != null && !genreStr.isEmpty()) {
+                            for (String g : genreStr.split(",")) {
+                                genres.add(g.trim());
+                            }
+                        }
+
                         Song song = new Song(
-                            rsSongs.getString("song_mbid"),
-                            rsSongs.getString("song_title"),
-                            artists,
-                            new ArrayList<>(),   // genres
-                            new ArrayList<>()    // relatedArtists
+                                rsSongs.getString("song_mbid"),
+                                rsSongs.getString("song_title"),
+                                artists,
+                                genres,
+                                new ArrayList<>()
                         );
 
                         playlist.addSong(song);
                     }
                 }
 
-                System.out.println("TOTAL SONGS IN PLAYLIST " + playlistId +
-                        " = " + playlist.getSongs().size());
+                System.out.println("SONGS IN PLAYLIST = " + playlist.getSongs().size());
 
                 playlists.add(playlist);
             }
 
-            System.out.println("✅ TOTAL PLAYLISTS = " + playlists.size());
+            System.out.println("TOTAL PLAYLISTS = " + playlists.size());
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -133,14 +136,10 @@ public class PlaylistDAO {
 
             int playlistId = -1;
 
-            // ======================
             // FIND PLAYLIST
-            // ======================
-            String select =
-                "SELECT id FROM playlists WHERE username = ? AND name = ?";
+            String find = "SELECT id FROM playlists WHERE username = ? AND name = ?";
 
-            try (PreparedStatement ps = conn.prepareStatement(select)) {
-
+            try (PreparedStatement ps = conn.prepareStatement(find)) {
                 ps.setString(1, username);
                 ps.setString(2, playlistName);
 
@@ -151,17 +150,14 @@ public class PlaylistDAO {
                 }
             }
 
-            // ======================
             // CREATE IF NOT EXISTS
-            // ======================
             if (playlistId == -1) {
 
                 String insertPlaylist =
-                    "INSERT INTO playlists(username, name) VALUES(?, ?)";
+                        "INSERT INTO playlists(username, name) VALUES(?, ?)";
 
                 try (PreparedStatement ps =
-                     conn.prepareStatement(insertPlaylist,
-                     Statement.RETURN_GENERATED_KEYS)) {
+                             conn.prepareStatement(insertPlaylist, Statement.RETURN_GENERATED_KEYS)) {
 
                     ps.setString(1, username);
                     ps.setString(2, playlistName);
@@ -169,42 +165,42 @@ public class PlaylistDAO {
                     ps.executeUpdate();
 
                     ResultSet keys = ps.getGeneratedKeys();
-
                     if (keys.next()) {
                         playlistId = keys.getInt(1);
                     }
                 }
             }
 
-            System.out.println("FINAL playlistId = " + playlistId);
+            System.out.println("playlistId = " + playlistId);
 
-            // ======================
             // INSERT SONG
-            // ======================
             String insertSong =
-                "INSERT INTO playlist_songs(" +
-                "playlist_id, song_mbid, song_title, artist" +
-                ") VALUES(?, ?, ?, ?)";
+                    "INSERT INTO playlist_songs " +
+                            "(playlist_id, song_mbid, song_title, artist, genres) " +
+                            "VALUES (?, ?, ?, ?, ?)";
 
             try (PreparedStatement ps = conn.prepareStatement(insertSong)) {
 
                 ps.setInt(1, playlistId);
-                ps.setString(2, song.getId() == null ? "unknown" : song.getId());
-                ps.setString(3, song.getTitle() == null ? "Untitled" : song.getTitle());
+                ps.setString(2, song.getId());
+                ps.setString(3, song.getTitle());
+
                 ps.setString(4,
-                    (song.getArtists() == null || song.getArtists().isEmpty())
-                        ? "Unknown"
-                        : song.getArtists().get(0)
+                        (song.getArtists() == null || song.getArtists().isEmpty())
+                                ? "Unknown"
+                                : song.getArtists().get(0)
+                );
+
+                ps.setString(5,
+                        (song.getGenres() == null || song.getGenres().isEmpty())
+                                ? ""
+                                : String.join(",", song.getGenres())
                 );
 
                 int rows = ps.executeUpdate();
-
                 System.out.println("ROWS INSERTED = " + rows);
             }
 
-            // ======================
-            // VERIFY INSERT
-            // ======================
             debugSongs();
 
         } catch (SQLException e) {
@@ -213,7 +209,7 @@ public class PlaylistDAO {
     }
 
     // =====================================================
-    // DEBUG ALL SONGS
+    // DEBUG
     // =====================================================
     public void debugSongs() {
 
@@ -223,21 +219,21 @@ public class PlaylistDAO {
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
 
-            System.out.println("\n=== ALL SONGS IN DB ===");
+            System.out.println("\n=== ALL SONGS ===");
 
             boolean found = false;
 
             while (rs.next()) {
                 found = true;
                 System.out.println(
-                    rs.getInt("playlist_id") + " | " +
-                    rs.getString("song_title") + " | " +
-                    rs.getString("artist")
+                        rs.getInt("playlist_id") + " | " +
+                                rs.getString("song_title") + " | " +
+                                rs.getString("artist")
                 );
             }
 
             if (!found) {
-                System.out.println("❌ NO SONGS IN DATABASE");
+                System.out.println("❌ NO SONGS FOUND");
             }
 
         } catch (SQLException e) {
@@ -245,4 +241,3 @@ public class PlaylistDAO {
         }
     }
 }
-
