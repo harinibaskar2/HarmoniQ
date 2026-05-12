@@ -9,12 +9,12 @@ public class RecommendationService {
 
     private static final double ARTIST_WEIGHT = 2.0;
     private static final double RELATED_WEIGHT = 1.0;
-    private static final double GENRE_WEIGHT = 1.5;
+    private static final double TAG_WEIGHT = 1.5;
     private static final int LIMIT = 10;
 
-    // ==================================
+    // =========================
     // BUILD USER PROFILE
-    // ==================================
+    // =========================
     public static UserProfile buildUserProfile(List<Playlist> playlists) {
 
         UserProfile profile = new UserProfile();
@@ -22,24 +22,22 @@ public class RecommendationService {
         for (Playlist p : playlists) {
             for (Song s : p.getSongs()) {
 
-                // artists
                 if (s.getArtists() != null) {
-                    for (String artist : s.getArtists()) {
-                        profile.addArtist(artist);
+                    for (String a : s.getArtists()) {
+                        profile.addArtist(a.toLowerCase());
                     }
                 }
 
-                // related artists
                 if (s.getRelatedArtists() != null) {
                     for (String r : s.getRelatedArtists()) {
-                        profile.addRelatedArtist(r);
+                        profile.addRelatedArtist(r.toLowerCase());
                     }
                 }
 
-                // genres ⭐ IMPORTANT
+                // IMPORTANT: treat as unified content tags
                 if (s.getGenres() != null) {
-                    for (String g : s.getGenres()) {
-                        profile.addGenre(g.toLowerCase());
+                    for (String tag : s.getGenres()) {
+                        profile.addGenre(tag.toLowerCase());
                     }
                 }
             }
@@ -48,17 +46,17 @@ public class RecommendationService {
         return profile;
     }
 
-    // ==================================
-    // MAIN RECOMMENDATION ENGINE
-    // ==================================
+    // =========================
+    // RECOMMENDER
+    // =========================
     public static List<Song> recommend(UserProfile profile) {
 
-        Map<String, Double> songScores = new HashMap<>();
+        Map<String, Double> scores = new HashMap<>();
         Map<String, Song> songMap = new HashMap<>();
 
-        // =========================
-        // ARTIST-BASED SCORING
-        // =========================
+        // -------------------
+        // ARTISTS
+        // -------------------
         for (String artist : profile.getArtistWeights().keySet()) {
 
             double weight = profile.getArtistWeights().get(artist) * ARTIST_WEIGHT;
@@ -66,15 +64,15 @@ public class RecommendationService {
             List<Song> songs = MusicBrainzService.fetchSongsByArtistName(artist);
 
             for (Song s : songs) {
-                songScores.put(s.getId(),
-                        songScores.getOrDefault(s.getId(), 0.0) + weight);
                 songMap.put(s.getId(), s);
+                scores.put(s.getId(),
+                        scores.getOrDefault(s.getId(), 0.0) + weight);
             }
         }
 
-        // =========================
-        // RELATED ARTIST SCORING
-        // =========================
+        // -------------------
+        // RELATED ARTISTS
+        // -------------------
         for (String artist : profile.getRelatedArtistWeights().keySet()) {
 
             double weight = profile.getRelatedArtistWeights().get(artist) * RELATED_WEIGHT;
@@ -82,48 +80,51 @@ public class RecommendationService {
             List<Song> songs = MusicBrainzService.fetchSongsByArtistName(artist);
 
             for (Song s : songs) {
-                songScores.put(s.getId(),
-                        songScores.getOrDefault(s.getId(), 0.0) + weight);
                 songMap.put(s.getId(), s);
+                scores.put(s.getId(),
+                        scores.getOrDefault(s.getId(), 0.0) + weight);
             }
         }
 
-        // =========================
-        // ⭐ REAL GENRE MATCHING (FIX)
-        // =========================
-        for (String genre : profile.getGenreWeights().keySet()) {
+        // -------------------
+        // TAG / GENRE MATCHING
+        // -------------------
+        for (Song s : songMap.values()) {
 
-            double weight = profile.getGenreWeights().get(genre) * GENRE_WEIGHT;
+            if (s.getGenres() == null) continue;
 
-            // FIX: get songs properly from artists instead of title search fallback
-            for (Song s : songMap.values()) {
+            for (String songTag : s.getGenres()) {
 
-                if (s.getGenres() == null) continue;
+                if (songTag == null) continue;
 
-                for (String g : s.getGenres()) {
+                for (String userTag : profile.getGenreWeights().keySet()) {
 
-                    if (g != null && g.toLowerCase().contains(genre)) {
+                    if (songTag.contains(userTag)) {
 
-                        songScores.put(s.getId(),
-                                songScores.getOrDefault(s.getId(), 0.0) + weight);
+                        double weight =
+                                profile.getGenreWeights().get(userTag) * TAG_WEIGHT;
+
+                        scores.put(
+                                s.getId(),
+                                scores.getOrDefault(s.getId(), 0.0) + weight
+                        );
                     }
                 }
             }
         }
 
-        // =========================
-        // RANKING
-        // =========================
+        // -------------------
+        // SORT
+        // -------------------
         List<Song> ranked = new ArrayList<>(songMap.values());
 
         ranked.sort((a, b) ->
                 Double.compare(
-                        songScores.getOrDefault(b.getId(), 0.0),
-                        songScores.getOrDefault(a.getId(), 0.0)
+                        scores.getOrDefault(b.getId(), 0.0),
+                        scores.getOrDefault(a.getId(), 0.0)
                 )
         );
 
         return ranked.size() > LIMIT ? ranked.subList(0, LIMIT) : ranked;
     }
 }
-

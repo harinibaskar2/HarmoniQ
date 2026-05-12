@@ -336,13 +336,12 @@ public class Main {
                 }
             }
         
-            List<String> genres = new ArrayList<>();
-            if (songMap.get("genres") instanceof List) {
-                for (Object g : (List<?>) songMap.get("genres")) {
-                    genres.add(g.toString());
-                }
-            }
-
+            List<String> metadata =
+            MusicBrainzService.fetchGenresAndTags((String) songMap.get("id"));
+            
+            System.out.println("GENRES/TAGS SIZE: " + metadata.size()); 
+            System.out.println("GENRES/TAGS: " + metadata);
+            
             List<String> relatedArtists = new ArrayList<>();
             if (songMap.get("relatedArtists") instanceof List) {
                 for (Object r : (List<?>) songMap.get("relatedArtists")) {
@@ -354,7 +353,7 @@ public class Main {
                     (String) songMap.get("id"),
                     (String) songMap.get("title"),
                     artists,
-                    genres,
+                    metadata,
                     relatedArtists
                 
             );

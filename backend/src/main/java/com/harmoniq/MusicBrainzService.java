@@ -272,6 +272,142 @@ public class MusicBrainzService {
 
 
     // =====================================================
+// FETCH METADATA (GENRES + TAGS + MOODS)
+// =====================================================
+// =====================================================
+    // FETCH GENRES + TAGS (FIXED VERSION)
+    // Uses release-group FIRST (correct source of truth)
+    // =====================================================
+    public static List<String> fetchGenresAndTags(String recordingId) {
+
+        List<String> metadata = new ArrayList<>();
+
+        try {
+
+            // STEP 1: Get recording → extract release-group id
+            String recUrl =
+                    "https://musicbrainz.org/ws/2/recording/" +
+                            recordingId +
+                            "?inc=releases&fmt=json";
+
+            String recResponse = sendGet(recUrl);
+            JsonObject recJson = JsonParser.parseString(recResponse).getAsJsonObject();
+
+            String releaseGroupId = null;
+
+            if (recJson.has("releases")) {
+                JsonArray releases = recJson.getAsJsonArray("releases");
+
+                if (releases.size() > 0) {
+                    JsonObject firstRelease = releases.get(0).getAsJsonObject();
+
+                    if (firstRelease.has("release-group")) {
+                        JsonObject rg = firstRelease.getAsJsonObject("release-group");
+                        releaseGroupId = rg.get("id").getAsString();
+                    }
+                }
+            }
+
+            // DEBUG
+            System.out.println("🎯 Release Group ID: " + releaseGroupId);
+
+            // STEP 2: If we got release-group → fetch genres properly
+            if (releaseGroupId != null) {
+
+                String rgUrl =
+                        "https://musicbrainz.org/ws/2/release-group/" +
+                                releaseGroupId +
+                                "?inc=genres+tags&fmt=json";
+
+                String rgResponse = sendGet(rgUrl);
+                JsonObject rgJson = JsonParser.parseString(rgResponse).getAsJsonObject();
+
+                System.out.println("📦 Release-group response received");
+
+                // =========================
+                // GENRES (PRIMARY SOURCE)
+                // =========================
+                if (rgJson.has("genres")) {
+                    JsonArray genres = rgJson.getAsJsonArray("genres");
+
+                    for (JsonElement gElem : genres) {
+                        JsonObject g = gElem.getAsJsonObject();
+
+                        if (g.has("name")) {
+                            String genre = g.get("name").getAsString().toLowerCase();
+
+                            if (!metadata.contains(genre)) {
+                                metadata.add(genre);
+                            }
+                        }
+                    }
+                }
+
+                // =========================
+                // TAGS
+                // =========================
+                if (rgJson.has("tags")) {
+                    JsonArray tags = rgJson.getAsJsonArray("tags");
+
+                    for (JsonElement tElem : tags) {
+                        JsonObject t = tElem.getAsJsonObject();
+
+                        if (t.has("name")) {
+                            String tag = t.get("name").getAsString().toLowerCase();
+
+                            if (tag.length() < 2) continue;
+
+                            if (!metadata.contains(tag)) {
+                                metadata.add(tag);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // STEP 3: FALLBACK (recording tags only if release-group empty)
+            if (metadata.isEmpty()) {
+
+                System.out.println("⚠️ Falling back to recording-level tags");
+
+                String fallbackUrl =
+                        "https://musicbrainz.org/ws/2/recording/" +
+                                recordingId +
+                                "?inc=tags&fmt=json";
+
+                String response = sendGet(fallbackUrl);
+                JsonObject json = JsonParser.parseString(response).getAsJsonObject();
+
+                if (json.has("tags")) {
+                    JsonArray tags = json.getAsJsonArray("tags");
+
+                    for (JsonElement tElem : tags) {
+                        JsonObject t = tElem.getAsJsonObject();
+
+                        if (t.has("name")) {
+                            String tag = t.get("name").getAsString().toLowerCase();
+
+                            if (tag.length() < 2) continue;
+
+                            if (!metadata.contains(tag)) {
+                                metadata.add(tag);
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("❌ fetchGenresAndTags failed: " + e.getMessage());
+        }
+
+        System.out.println("🎧 FINAL METADATA: " + metadata);
+
+        return metadata;
+    }
+
+
+    // =====================================================
     // HTTP REQUEST
     // =====================================================
     private static String sendGet(String urlStr) throws Exception {
