@@ -33,9 +33,19 @@ public class Database {
             "FOREIGN KEY(artist_id) REFERENCES artists(id))"
         );
 
+        // ✅ ADD THIS (THIS IS WHAT YOU'RE MISSING)
+        stmt.execute(
+            "CREATE TABLE IF NOT EXISTS genre_feedback (" +
+            "username TEXT NOT NULL, " +
+            "genre TEXT NOT NULL, " +
+            "score INTEGER DEFAULT 0, " +
+            "PRIMARY KEY(username, genre)" +
+            ")"
+        );
+
         stmt.close();
         conn.close();
+
+        System.out.println("✅ Database initialized successfully");
     }
 }
-
-

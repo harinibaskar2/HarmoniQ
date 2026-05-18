@@ -17,4 +17,5 @@ com/harmoniq/CandidateService.class
 com/harmoniq/MusicBrainzService.class
 com/harmoniq/UserDAO.class
 com/harmoniq/Artist.class
+com/harmoniq/GenreFeedbackDAO.class
 com/harmoniq/MusicBrainzRateLimiter.class

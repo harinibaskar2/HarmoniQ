@@ -14,6 +14,8 @@ import java.util.Set;
 import org.mindrot.jbcrypt.BCrypt;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
 import static spark.Spark.before;
@@ -401,6 +403,159 @@ public class Main {
             List<Playlist> playlists = playlistDAO.getPlaylists(username);
             return gson.toJson(playlists);
         });
+
+
+
+
+        get("/genres", (req, res) -> {
+            res.type("application/json");
+        
+            System.out.println("🔥 /genres HIT");
+        
+            List<String> genres = MusicBrainzService.getAllGenres();
+        
+            System.out.println("🎧 genres = " + genres);
+        
+            return gson.toJson(genres);
+        });
+
+        get("/songs/genre", (req, res) -> {
+            res.type("application/json");
+        
+            String genre = req.queryParams("genre");
+        
+            System.out.println("🔥 /songs/genre HIT with genre = " + genre);
+        
+            if (genre == null || genre.isEmpty()) {
+                System.out.println("❌ genre is empty");
+                return "[]";
+            }
+        
+            List<Song> songs = MusicBrainzService.fetchSongsByGenre(genre);
+        
+            System.out.println("🎧 songs returned BEFORE shuffle = " + songs.size());
+        
+            if (songs == null) {
+                System.out.println("❌ songs is NULL");
+                return "[]";
+            }
+        
+            Collections.shuffle(songs);
+        
+            int limit = Math.min(10, songs.size());
+            List<Song> randomSongs = songs.subList(0, limit);
+        
+            System.out.println("✅ returning songs = " + randomSongs.size());
+        
+            return gson.toJson(randomSongs);
+        });
+
+        // =========================
+// =========================
+// GENRE FEEDBACK ROUTES
+// =========================
+
+
+
+        get("/user/top-genre", (req, res) -> {
+            String username = req.queryParams("username");
+        
+            String top = GenreFeedbackDAO.getTopGenre(username);
+        
+            Map<String, String> result = new HashMap<>();
+            result.put("topGenre", top == null ? "" : top);
+        
+            return gson.toJson(result);
+        });
+
+
+
+        post("/feedback/genre-song", (req, res) -> {
+            res.type("application/json");
+        
+            JsonObject body = JsonParser.parseString(req.body()).getAsJsonObject();
+        
+            String genre = body.has("genre") && !body.get("genre").isJsonNull()
+                    ? body.get("genre").getAsString()
+                    : null;
+        
+            String type = body.has("type") && !body.get("type").isJsonNull()
+                    ? body.get("type").getAsString()
+                    : null;
+        
+            String username = body.has("username") && !body.get("username").isJsonNull()
+                    ? body.get("username").getAsString()
+                    : "guest";
+        
+            if (genre == null || type == null) {
+                res.status(400);
+        
+                Map<String, String> error = new HashMap<>();
+                error.put("status", "error");
+                error.put("message", "Missing fields");
+        
+                return gson.toJson(error);
+            }
+        
+            if ("like".equals(type)) {
+                GenreFeedbackDAO.like(username, genre);
+            } else {
+                GenreFeedbackDAO.dislike(username, genre);
+            }
+        
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "ok");
+        
+            return gson.toJson(response);
+        });
+
+        get("/recommendations/genre", (req, res) -> {
+            res.type("application/json");
+        
+            String username = req.queryParams("username");
+        
+            Map<String, Object> emptyResponse = new HashMap<>();
+            emptyResponse.put("topGenre", "");
+            emptyResponse.put("songs", new ArrayList<>());
+        
+            if (username == null || username.isEmpty()) {
+                return gson.toJson(emptyResponse);
+            }
+        
+            String topGenre = GenreFeedbackDAO.getTopGenre(username);
+        
+            if (topGenre == null || topGenre.isEmpty()) {
+                return gson.toJson(emptyResponse);
+            }
+        
+            List<Song> songs = MusicBrainzService.fetchSongsByGenre(topGenre);
+        
+            if (songs == null) {
+                songs = new ArrayList<>();
+            }
+        
+            Collections.shuffle(songs);
+        
+            List<Song> result = songs.subList(0, Math.min(10, songs.size()));
+        
+            Map<String, Object> response = new HashMap<>();
+            response.put("topGenre", topGenre);
+            response.put("songs", result);
+        
+            return gson.toJson(response);
+        });
+
+
+
+
+
+    
+
+
+
+        
+
+
 
 
        
