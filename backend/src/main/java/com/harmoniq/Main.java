@@ -415,45 +415,27 @@ public class Main {
                 return "[]";
             }
         
-            System.out.println("\n=== RECOMMENDATIONS DEBUG ===");
-            System.out.println("USER: " + username);
-        
-            // 1. Get playlists
+            // 1. LOAD USER DATA
             List<Playlist> playlists = playlistDAO.getPlaylists(username);
         
-            System.out.println("PLAYLIST COUNT: " + playlists.size());
-        
             if (playlists.isEmpty()) {
-                System.out.println("❌ No playlists found");
                 return "[]";
             }
         
-            // 2. Build profile
+            // 2. BUILD USER PROFILE
             UserProfile profile =
                     RecommendationService.buildUserProfile(playlists);
         
-            System.out.println("TOP ARTISTS: " + profile.getTopArtist());
+            // 3. BUILD CANDIDATES (IMPORTANT STEP YOU ADD HERE)
+            List<Song> candidates =
+                    CandidateService.buildCandidates(profile);
         
-            // 3. Generate recommendations
+            // 4. GENERATE RECOMMENDATIONS
             List<Song> recommendations =
-                    RecommendationService.recommend(profile);
-        
-            System.out.println("RECOMMENDATIONS SIZE: " +
-                    (recommendations == null ? 0 : recommendations.size()));
-        
-            if (recommendations == null || recommendations.isEmpty()) {
-                System.out.println("❌ No recommendations generated");
-                return "[]";
-            }
-        
-            // 4. Print sample recommendations
-            for (Song s : recommendations) {
-                System.out.println("➡ " + s.getTitle());
-            }
+                    RecommendationService.recommend(profile, candidates);
         
             return new Gson().toJson(recommendations);
         });
-
     } 
 } 
 

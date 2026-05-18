@@ -1,10 +1,12 @@
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/Artist.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/ArtistDAO.java
+/Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/CandidateService.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/DBConfig.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/Database.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/JwtUtil.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/Main.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/MusicBrainzCache.java
+/Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/MusicBrainzCachedService.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/MusicBrainzRateLimiter.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/MusicBrainzService.java
 /Users/harinibaskar/Desktop/College3rdYear/winterquarter/HarmoniQ/backend/src/main/java/com/harmoniq/Playlist.java

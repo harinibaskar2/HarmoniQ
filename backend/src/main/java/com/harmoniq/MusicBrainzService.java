@@ -448,5 +448,3 @@ public class MusicBrainzService {
         return content.toString();
     }
 }
-
-
