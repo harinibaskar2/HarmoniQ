@@ -458,13 +458,25 @@ public class Main {
 
 
         get("/user/top-genre", (req, res) -> {
+            res.type("application/json");
+
             String username = req.queryParams("username");
-        
-            String top = GenreFeedbackDAO.getTopGenre(username);
-        
-            Map<String, String> result = new HashMap<>();
-            result.put("topGenre", top == null ? "" : top);
-        
+
+            Map<String, Object> result = new HashMap<>();
+
+            if (username == null || username.isEmpty()) {
+                result.put("topGenres", new ArrayList<>());
+                return gson.toJson(result);
+            }
+
+            List<String> topGenres = GenreFeedbackDAO.getTopGenres(username);
+
+            if (topGenres == null) {
+                topGenres = new ArrayList<>();
+            }
+
+            result.put("topGenres", topGenres);
+
             return gson.toJson(result);
         });
 
@@ -509,41 +521,73 @@ public class Main {
             return gson.toJson(response);
         });
 
+
+
+        get("/debug/genre-scores", (req, res) -> {
+
+            String username = req.queryParams("username");
+        
+            Map<String, Integer> scores = GenreFeedbackDAO.getUserScores(username);
+        
+            System.out.println("🔥 DEBUG SCORES = " + scores);
+        
+            return gson.toJson(scores);
+        });
+
+        
+
         get("/recommendations/genre", (req, res) -> {
             res.type("application/json");
         
             String username = req.queryParams("username");
         
             Map<String, Object> emptyResponse = new HashMap<>();
-            emptyResponse.put("topGenre", "");
+            emptyResponse.put("topGenres", new ArrayList<>());
             emptyResponse.put("songs", new ArrayList<>());
         
             if (username == null || username.isEmpty()) {
                 return gson.toJson(emptyResponse);
             }
         
-            String topGenre = GenreFeedbackDAO.getTopGenre(username);
+            List<String> topGenres = GenreFeedbackDAO.getTopGenres(username);
         
-            if (topGenre == null || topGenre.isEmpty()) {
+            if (topGenres == null || topGenres.isEmpty()) {
                 return gson.toJson(emptyResponse);
             }
         
-            List<Song> songs = MusicBrainzService.fetchSongsByGenre(topGenre);
+            // =========================
+            // COLLECT SONGS FROM ALL TOP GENRES
+            // =========================
+            List<Song> songs = new ArrayList<>();
         
-            if (songs == null) {
-                songs = new ArrayList<>();
+            for (String genre : topGenres) {
+        
+                List<Song> genreSongs = MusicBrainzService.fetchSongsByGenre(genre);
+        
+                if (genreSongs != null) {
+                    songs.addAll(genreSongs);
+                }
             }
         
+            if (songs.isEmpty()) {
+                return gson.toJson(emptyResponse);
+            }
+        
+            // shuffle for variety (optional)
             Collections.shuffle(songs);
         
             List<Song> result = songs.subList(0, Math.min(10, songs.size()));
         
+            // =========================
+            // RESPONSE
+            // =========================
             Map<String, Object> response = new HashMap<>();
-            response.put("topGenre", topGenre);
+            response.put("topGenres", topGenres);   // ✅ FIXED (was topGenre)
             response.put("songs", result);
         
             return gson.toJson(response);
         });
+
 
 
 

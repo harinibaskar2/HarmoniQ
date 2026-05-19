@@ -5,7 +5,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class GenreFeedbackDAO {
 
@@ -15,7 +17,7 @@ public class GenreFeedbackDAO {
     // SAVE LIKE
     // =========================
     public static void like(String username, String genre) {
-        updateScore(username, genre, 1);
+        updateScore(username, genre, 2); // 🔥 stronger signal
     }
 
     // =========================
@@ -86,16 +88,25 @@ public class GenreFeedbackDAO {
     }
 
     // =========================
-    // TOP GENRE (SAFE)
+    // TOP GENRE (SMART VERSION)
     // =========================
-    public static String getTopGenre(String username) {
+    public static List<String> getTopGenres(String username) {
 
         Map<String, Integer> scores = getUserScores(username);
-
+    
+        System.out.println("🔥 GENRE SCORES:");
+        scores.forEach((k, v) ->
+            System.out.println(k + " = " + v)
+        );
+    
         return scores.entrySet()
                 .stream()
-                .max((a, b) -> Integer.compare(a.getValue(), b.getValue()))
+                .filter(e -> e.getValue() > 0) // ignore negative/neutral
+                .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+                .limit(3)
                 .map(Map.Entry::getKey)
-                .orElse("");
+                .collect(Collectors.toList());
     }
 }
+
+

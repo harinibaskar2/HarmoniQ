@@ -9,31 +9,21 @@ function GenreTab() {
   const [playlistName, setPlaylistName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [recommendedSongs, setRecommendedSongs] = useState([]);
+  const [topGenres, setTopGenres] = useState([]);
+
   const { addSongToPlaylist } = useContext(PlaylistContext);
 
-  // TEMP USERNAME
-  // make sure this matches Playlist.js
   const username = "sanjay";
 
   // =========================
   // FETCH GENRES
   // =========================
   useEffect(() => {
-
-    console.log("🔥 Fetching genres...");
-
     fetch("http://localhost:8080/genres")
       .then((res) => res.json())
-      .then((data) => {
-
-        console.log("✅ Genres loaded:", data);
-
-        setGenres(data);
-      })
-      .catch((err) =>
-        console.error("❌ Failed to fetch genres:", err)
-      );
-
+      .then((data) => setGenres(data))
+      .catch((err) => console.error(err));
   }, []);
 
   // =========================
@@ -43,79 +33,59 @@ function GenreTab() {
 
     if (!selectedGenre) return;
 
-    console.log("🔥 Fetching songs for genre:", selectedGenre);
-
     setLoading(true);
 
     fetch(
-      `http://localhost:8080/songs/genre?genre=${encodeURIComponent(
-        selectedGenre
-      )}`
+      `http://localhost:8080/songs/genre?genre=${encodeURIComponent(selectedGenre)}`
     )
       .then((res) => res.json())
-      .then((data) => {
-
-        console.log("✅ Songs loaded:", data);
-
-        setSongs(data);
-      })
-      .catch((err) =>
-        console.error("❌ Failed to fetch songs:", err)
-      )
+      .then((data) => setSongs(data))
+      .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   };
 
   // =========================
-  // SEND FEEDBACK
+  // FETCH RECOMMENDATIONS
+  // =========================
+  const fetchRecommendations = () => {
+
+    fetch(`http://localhost:8080/recommendations/genre?username=${username}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setTopGenres(data.topGenres || []);
+        setRecommendedSongs(data.songs || []);
+      })
+      .catch((err) =>
+        console.error("❌ recommendation error:", err)
+      );
+  };
+
+  useEffect(() => {
+    fetchRecommendations();
+  }, []);
+
+  // =========================
+  // FEEDBACK
   // =========================
   const sendFeedback = async (song, type) => {
 
     try {
+      await fetch("http://localhost:8080/feedback/genre-song", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          genre: selectedGenre,
+          songId: song.id,
+          type
+        }),
+      });
 
-      console.log("🔥 SENDING FEEDBACK");
-      console.log("USERNAME =", username);
-      console.log("GENRE =", selectedGenre);
-      console.log("SONG =", song.title);
-      console.log("TYPE =", type);
-
-      const response = await fetch(
-        "http://localhost:8080/feedback/genre-song",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-          },
-
-          body: JSON.stringify({
-            username: username,
-            genre: selectedGenre,
-            songId: song.id,
-            type: type,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      console.log("✅ FEEDBACK RESPONSE:", data);
+      fetchRecommendations();
 
     } catch (err) {
-
-      console.error("❌ Feedback error:", err);
+      console.error(err);
     }
-  };
-
-  // =========================
-  // HANDLE GENRE CHANGE
-  // =========================
-  const handleChange = (e) => {
-
-    console.log("🎧 Selected genre:", e.target.value);
-
-    setSelectedGenre(e.target.value);
-
-    setSongs([]);
   };
 
   // =========================
@@ -123,19 +93,14 @@ function GenreTab() {
   // =========================
   const handleAddToPlaylist = (song) => {
 
-    console.log("➕ Adding to playlist:", song.title);
-
     let name = playlistName.trim();
 
     if (!name) {
-
       name = prompt("Enter playlist name:");
-
       if (!name) return;
     }
 
     addSongToPlaylist(name, song);
-
     setPlaylistName("");
   };
 
@@ -144,154 +109,149 @@ function GenreTab() {
 
       <h2>Genres</h2>
 
-      {/* ================= GENRE DROPDOWN ================= */}
-      <div style={{ marginBottom: "10px" }}>
-
-        <select
-          value={selectedGenre}
-          onChange={handleChange}
-        >
-
-          <option value="">
-            Select a genre
+      {/* ================= GENRE SELECT ================= */}
+      <select
+        value={selectedGenre}
+        onChange={(e) => setSelectedGenre(e.target.value)}
+      >
+        <option value="">Select a genre</option>
+        {genres.map((g) => (
+          <option key={g} value={g}>
+            {g}
           </option>
+        ))}
+      </select>
 
-          {genres.map((g) => (
-            <option
-              key={g}
-              value={g}
-            >
-              {g}
-            </option>
-          ))}
+      <button onClick={fetchSongsByGenre} style={{ marginLeft: "10px" }}>
+        Refresh Songs
+      </button>
 
-        </select>
-
-        <button
-          onClick={fetchSongsByGenre}
-          style={{ marginLeft: "10px" }}
-        >
-          Refresh Songs
-        </button>
-
-      </div>
-
-      {/* ================= PLAYLIST INPUT ================= */}
       <input
         type="text"
         placeholder="Playlist name (optional)"
         value={playlistName}
         onChange={(e) => setPlaylistName(e.target.value)}
-        style={{
-          marginBottom: "20px",
-          width: "200px",
-        }}
+        style={{ marginLeft: "10px" }}
       />
 
-      {/* ================= EMPTY STATE ================= */}
-      {!selectedGenre && (
-        <p>Please select a genre to see songs.</p>
-      )}
+      {/* ================= SONG LIST ================= */}
+      <div style={{ marginTop: "20px" }}>
 
-      {/* ================= SONGS ================= */}
-      {selectedGenre && (
+        <h3>🎧 Songs in "{selectedGenre}"</h3>
 
-        <div>
+        {loading ? (
+          <p>Loading...</p>
+        ) : songs.length === 0 ? (
+          <p>No songs found.</p>
+        ) : (
+          <ul style={{ listStyle: "none", padding: 0 }}>
 
-          <h3>
-            Songs in "{selectedGenre}"
-          </h3>
+            {songs.map((song) => (
+              <li
+                key={song.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "10px",
+                  marginBottom: "10px",
+                  borderRadius: "10px",
+                  backgroundColor: "#111",
+                  border: "1px solid #333"
+                }}
+              >
+                <span>
+                  {song.title}
+                  {song.artists?.length > 0
+                    ? ` - ${song.artists.join(", ")}`
+                    : ""}
+                </span>
 
-          {loading ? (
+                <div>
+                  <button onClick={() => sendFeedback(song, "like")}>👍</button>
+                  <button onClick={() => sendFeedback(song, "dislike")}>👎</button>
+                  <button onClick={() => handleAddToPlaylist(song)}>Add</button>
+                </div>
+              </li>
+            ))}
 
-            <p>Loading songs...</p>
+          </ul>
+        )}
+      </div>
 
-          ) : songs.length === 0 ? (
+      {/* ================= RECOMMENDATIONS ================= */}
+      <div style={{ marginTop: "40px" }}>
 
-            <p>No songs found for this genre.</p>
+        <h3>🎧 Recommended For You</h3>
 
-          ) : (
-
-            <ul
+        {/* ================= CLICKABLE GENRE BUTTONS ================= */}
+        <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
+          {topGenres.map((g) => (
+            <button
+              key={g}
+              onClick={() => console.log("Clicked genre:", g)}
               style={{
-                padding: 0,
-                listStyle: "none",
+                padding: "6px 12px",
+                borderRadius: "20px",
+                backgroundColor: "#ed859f",
+                color: "#fff",
+                fontSize: "12px",
+                border: "none",
+                cursor: "pointer"
               }}
             >
-
-              {songs.map((song) => (
-
-                <li
-                  key={song.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "8px",
-                    padding: "5px 0",
-                    borderBottom: "1px solid #eee",
-                  }}
-                >
-
-                  {/* SONG INFO */}
-                  <span>
-
-                    {song.title}
-
-                    {song.artists?.length > 0
-                      ? ` - ${song.artists.join(", ")}`
-                      : ""}
-
-                  </span>
-
-                  {/* ACTIONS */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                    }}
-                  >
-
-                    {/* LIKE */}
-                    <button
-                      onClick={() =>
-                        sendFeedback(song, "like")
-                      }
-                    >
-                      👍
-                    </button>
-
-                    {/* DISLIKE */}
-                    <button
-                      onClick={() =>
-                        sendFeedback(song, "dislike")
-                      }
-                    >
-                      👎
-                    </button>
-
-                    {/* ADD */}
-                    <button
-                      onClick={() =>
-                        handleAddToPlaylist(song)
-                      }
-                    >
-                      Add
-                    </button>
-
-                  </div>
-
-                </li>
-
-              ))}
-
-            </ul>
-
-          )}
-
+              {g}
+            </button>
+          ))}
         </div>
 
-      )}
+        {/* ================= DESCRIPTION ================= */}
+        {topGenres.length > 0 ? (
+          <p>
+            Because you like{" "}
+            <b>{topGenres.join(", ")}</b>
+          </p>
+        ) : (
+          <p>Like songs to personalize recommendations</p>
+        )}
+
+        {/* ================= SONGS ================= */}
+        {recommendedSongs.length === 0 ? (
+          <p>No recommendations yet</p>
+        ) : (
+          <ul style={{ listStyle: "none", padding: 0 }}>
+
+            {recommendedSongs.map((song) => (
+              <li
+                key={song.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "10px",
+                  marginBottom: "10px",
+                  borderRadius: "10px",
+                  backgroundColor: "#111",
+                  border: "1px solid #333"
+                }}
+              >
+                <span>
+                  {song.title}
+                  {song.artists?.length > 0
+                    ? ` - ${song.artists.join(", ")}`
+                    : ""}
+                </span>
+
+                <button onClick={() => handleAddToPlaylist(song)}>
+                  ➕ Add
+                </button>
+              </li>
+            ))}
+
+          </ul>
+        )}
+
+      </div>
 
     </div>
   );
