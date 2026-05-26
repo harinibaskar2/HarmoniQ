@@ -2,12 +2,15 @@ package com.harmoniq;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
 
 public class CandidateService {
 
     private static final int MAX_SONGS_PER_ARTIST = 20;
+    private static final int MAX_TOTAL_ARTISTS = 30;
 
     public static List<Song> buildCandidates(UserProfile profile) {
 
@@ -15,44 +18,53 @@ public class CandidateService {
         Set<String> seenSongIds = new HashSet<>();
         List<Song> candidates = new ArrayList<>();
 
-        // -----------------------
-        // DIRECT ARTISTS
-        // -----------------------
-        for (String artist : profile.getArtistWeights().keySet()) {
+        Queue<String> queue = new LinkedList<>();
 
+        queue.addAll(profile.getArtistWeights().keySet());
+        queue.addAll(profile.getRelatedArtistWeights().keySet());
+
+        System.out.println("\n===== BUILDING CANDIDATES =====");
+        System.out.println("Seed artists: " + queue);
+
+        while (!queue.isEmpty() && seenArtists.size() < MAX_TOTAL_ARTISTS) {
+
+            String artist = queue.poll();
             if (artist == null) continue;
 
             String normalized = artist.toLowerCase().trim();
+
             if (!seenArtists.add(normalized)) continue;
+
+            System.out.println("\n🔎 Fetching songs for artist: " + normalized);
 
             List<Song> songs =
                     MusicBrainzCachedService.getSongsByArtist(normalized);
+
+            if (songs == null || songs.isEmpty()) {
+                System.out.println("⚠️ No songs returned for: " + normalized);
+                continue;
+            }
+
+            System.out.println("🎵 Songs returned: " + songs.size());
+
+            // DEBUG: show raw songs from API layer
+            for (Song s : songs) {
+                System.out.println("   - " + s.getTitle()
+                        + " | artists=" + s.getArtists());
+            }
 
             addSongs(songs, candidates, seenSongIds);
         }
 
-        // -----------------------
-        // RELATED ARTISTS
-        // -----------------------
-        for (String artist : profile.getRelatedArtistWeights().keySet()) {
-
-            if (artist == null) continue;
-
-            String normalized = artist.toLowerCase().trim();
-            if (!seenArtists.add(normalized)) continue;
-
-            List<Song> songs =
-                    MusicBrainzCachedService.getSongsByArtist(normalized);
-
-            addSongs(songs, candidates, seenSongIds);
+        System.out.println("\n===== FINAL CANDIDATES =====");
+        for (Song s : candidates) {
+            System.out.println("✔ " + s.getTitle()
+                    + " | " + s.getArtists());
         }
 
         return candidates;
     }
 
-    // -----------------------
-    // SAFE ADDITION LOGIC
-    // -----------------------
     private static void addSongs(
             List<Song> songs,
             List<Song> candidates,
@@ -66,14 +78,11 @@ public class CandidateService {
 
             if (s == null || s.getId() == null) continue;
 
-            if (seenSongIds.contains(s.getId())) continue;
+            if (!seenSongIds.add(s.getId())) continue;
 
-            seenSongIds.add(s.getId());
             candidates.add(s);
 
-            count++;
-            if (count >= MAX_SONGS_PER_ARTIST) break;
+            if (++count >= MAX_SONGS_PER_ARTIST) break;
         }
     }
 }
-

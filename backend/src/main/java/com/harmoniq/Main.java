@@ -629,11 +629,22 @@ public class Main {
             List<Song> candidates =
                     CandidateService.buildCandidates(profile);
         
-            // 4. GENERATE RECOMMENDATIONS
+            
+            
+            
+            
+                    // 4. GENERATE RECOMMENDATIONS
             List<Song> recommendations =
                     RecommendationService.recommend(profile, candidates);
         
-            return new Gson().toJson(recommendations);
+            System.out.println("\n===== FINAL RECOMMENDATIONS SENT TO FRONTEND =====");
+
+            for (Song s : recommendations) {
+                System.out.println("SONG: " + s.getTitle());
+                System.out.println("ARTISTS: " + s.getArtists());
+            }
+            
+                    return new Gson().toJson(recommendations);
         });
     } 
 } 

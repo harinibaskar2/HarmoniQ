@@ -1,52 +1,25 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState } from "react";
 import { PlaylistContext } from "../context/PlaylistContext";
-import axios from "axios";
 import "./Playlist.css";
-
-const API_BASE = "http://localhost:8080";
 
 const Playlist = () => {
   const {
     playlists,
+    recommendations,
     removeSongFromPlaylist,
     addSongToPlaylist,
   } = useContext(PlaylistContext);
 
   const [activePlaylist, setActivePlaylist] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
 
-  const username = "sanjay"; // keep MVP simple for now
-
-  // =========================
-  // FETCH RECOMMENDATIONS
-  // =========================
-  const fetchRecommendations = async () => {
-    try {
-      const res = await axios.get(
-        `${API_BASE}/recommendations?username=${username}`
-      );
-
-      setRecommendations(res.data);
-    } catch (err) {
-      console.error("❌ Error fetching recommendations:", err);
-    }
-  };
-
-  // load recommendations when page opens
-  useEffect(() => {
-    fetchRecommendations();
-  }, [playlists]);
+  const username = "sanjay";
 
   const togglePlaylist = (name) => {
-    setActivePlaylist(activePlaylist === name ? null : name);
+    setActivePlaylist((prev) => (prev === name ? null : name));
   };
 
   const handleDelete = (playlistName, songId, songTitle) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete "${songTitle}" from ${playlistName}?`
-      )
-    ) {
+    if (window.confirm(`Are you sure you want to delete "${songTitle}"?`)) {
       removeSongFromPlaylist(playlistName, songId);
     }
   };
@@ -83,7 +56,10 @@ const Playlist = () => {
                 .songs.map((song) => (
                   <li key={song.id} className="song-item">
                     <span>
-                      {song.title} — {song.artists?.join(", ")}
+                      {song.title} —{" "}
+                      {Array.isArray(song.artists)
+                        ? song.artists.join(", ")
+                        : song.artists || "Unknown Artist"}
                     </span>
 
                     <button
@@ -102,44 +78,48 @@ const Playlist = () => {
       )}
 
       {/* ================= RECOMMENDATIONS ================= */}
-{/* ================= RECOMMENDATIONS ================= */}
-    <div style={{ marginTop: "40px" }}>
-      <h2>Recommended for You 🔥</h2>
+      <div style={{ marginTop: "40px" }}>
+        <h2>Recommended for You 🔥</h2>
 
-      {recommendations.length === 0 ? (
-        <p className="no-songs">No recommendations yet</p>
-      ) : (
-        <ul className="songs-list">
-          {recommendations.map((song) => (
-            <li key={song.id} className="song-item">
+        {recommendations.length === 0 ? (
+          <p className="no-songs">No recommendations yet</p>
+        ) : (
+          <ul className="songs-list">
+            {recommendations.map((song) => {
 
-              {/* ✅ CLEAN DISPLAY: ONLY TITLE */}
-              <span>
-                {song.title}
-              </span>
+              console.log("SONG FROM BACKEND:", song);
 
-              {/* ➕ ADD BUTTON */}
-              <button
-                className="add-btn"
-                onClick={() => {
-                  const playlistName = prompt("Add to which playlist?");
+              return (
+                <li key={song.id} className="song-item">
+                  <div>
+                    <div style={{ fontWeight: "600" }}>
+                      {song.title}
+                    </div>
 
-                  if (!playlistName) return;
+                    <div style={{ fontSize: "13px", color: "#666" }}>
+                      {Array.isArray(song.artists)
+                        ? song.artists.join(", ")
+                        : song.artists || "Unknown Artist"}
+                    </div>
+                  </div>
 
-                  addSongToPlaylist(playlistName, song);
+                  <button
+                    className="add-btn"
+                    onClick={() => {
+                      const playlistName = prompt("Add to which playlist?");
+                      if (!playlistName) return;
 
-                  // refresh recommendations after adding
-                  fetchRecommendations();
-                }}
-              >
-                + Add
-              </button>
-
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+                      addSongToPlaylist(playlistName, song);
+                    }}
+                  >
+                    + Add
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 };
