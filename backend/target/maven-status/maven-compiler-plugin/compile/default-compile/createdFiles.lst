@@ -5,6 +5,7 @@ com/harmoniq/Main$1.class
 com/harmoniq/RecommendationService.class
 com/harmoniq/MusicBrainzCachedService.class
 com/harmoniq/DBConfig.class
+com/harmoniq/RecommendationResult.class
 com/harmoniq/PlaylistDAO.class
 com/harmoniq/JwtUtil.class
 com/harmoniq/UserProfile.class

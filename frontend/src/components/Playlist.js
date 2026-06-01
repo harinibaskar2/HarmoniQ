@@ -14,6 +14,18 @@ const Playlist = () => {
 
   const username = "sanjay";
 
+  // Remove duplicate recommendations (same title + artists)
+  const uniqueRecommendations = [
+    ...new Map(
+      recommendations.map((song) => [
+        `${song.title?.toLowerCase()}-${(song.artists || [])
+          .join(",")
+          .toLowerCase()}`,
+        song,
+      ])
+    ).values(),
+  ];
+
   const togglePlaylist = (name) => {
     setActivePlaylist((prev) => (prev === name ? null : name));
   };
@@ -81,12 +93,11 @@ const Playlist = () => {
       <div style={{ marginTop: "40px" }}>
         <h2>Recommended for You 🔥</h2>
 
-        {recommendations.length === 0 ? (
+        {uniqueRecommendations.length === 0 ? (
           <p className="no-songs">No recommendations yet</p>
         ) : (
           <ul className="songs-list">
-            {recommendations.map((song) => {
-
+            {uniqueRecommendations.map((song) => {
               console.log("SONG FROM BACKEND:", song);
 
               return (
