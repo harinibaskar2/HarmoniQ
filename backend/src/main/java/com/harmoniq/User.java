@@ -1,5 +1,17 @@
 package com.harmoniq;
 
+/**
+ * Represents a user in the HarmoniQ system.
+ *
+ * Stores basic user information including the user ID,
+ * username, and hashed password. This class is used for
+ * authentication and user management.
+ *
+ * The password is stored as a hash for security purposes.
+ *
+ * @author Harini Baskar
+ */
+
 public class User {
     private int id;
     private String username;

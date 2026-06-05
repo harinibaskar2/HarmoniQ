@@ -1,25 +1,22 @@
 package com.harmoniq;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.mindrot.jbcrypt.BCrypt;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
 
 import static spark.Spark.before;
 import static spark.Spark.exception;
@@ -29,15 +26,39 @@ import static spark.Spark.port;
 import static spark.Spark.post;
 import static spark.Spark.staticFiles;
 
+
+/**
+ * Main entry point for the HarmoniQ backend application.
+ *
+ * Configures and starts the Spark Java web server, initializes
+ * the database, handles user authentication, playlist management,
+ * song search, genre feedback, and music recommendation endpoints.
+ *
+ * This class acts as the central controller that connects the
+ * frontend, database, and recommendation services.
+ *
+ * @author Harini Baskar 
+ */
+
 public class Main {
 
     private static final Map<String, String> users = new HashMap<>();
-
     private static final Gson gson = new Gson();
     private static final Path USER_FILE = Paths.get("users.json");
 
+
     public static void main(String[] args) throws Exception {
-        port(8080);
+
+        // Initialize database tables
+    Database.initialize();
+
+    // Create PlaylistDAO instance
+    final PlaylistDAO playlistDAO = new PlaylistDAO();
+    UserDAO userDAO = new UserDAO();
+
+
+    port(8080);
+
 
         // Load users from file
         if (Files.exists(USER_FILE)) {
@@ -74,7 +95,7 @@ public class Main {
         });
 
         // Health check
-        get("/health", (req, res) -> "HarmoniQ backend running 🚀");
+        get("/health", (req, res) -> "HarmoniQ backend running ");
 
         // ---------------- REGISTER ----------------
         post("/register", (req, res) -> {
@@ -135,98 +156,510 @@ public class Main {
             return gson.toJson(resp);
         });
 
-
-
-    // ---------------- DISCOVER SONGS ----------------  
-// ---------------- DISCOVER SONGS ----------------  
         get("/songs", (req, res) -> {
             res.type("application/json");
-
-            String query = req.queryParams("query");   // song title
-            String artist = req.queryParams("artist"); // optional
-            String genre = req.queryParams("genre");   // optional
-
-            // Build MusicBrainz query
-            StringBuilder mbQuery = new StringBuilder();
-
-            if (query != null && !query.isEmpty()) {
-                mbQuery.append("recording:").append(query);
+        
+            String artist =
+                    req.queryParams("artist") == null
+                            ? ""
+                            : req.queryParams("artist").trim();
+        
+            String title =
+                    req.queryParams("title") == null
+                            ? ""
+                            : req.queryParams("title").trim();
+        
+            boolean refresh =
+                    "true".equalsIgnoreCase(req.queryParams("refresh"));
+        
+            if (artist.isEmpty() && title.isEmpty()) {
+                return "[]";
             }
-            if (artist != null && !artist.isEmpty()) {
-                if (mbQuery.length() > 0) mbQuery.append(" AND ");
-                mbQuery.append("artist:").append(artist);
-            }
-            if (genre != null && !genre.isEmpty()) {
-                if (mbQuery.length() > 0) mbQuery.append(" AND ");
-                mbQuery.append("tag:").append(genre);
-            }
-
-            // If still empty, search all recordings
-            if (mbQuery.length() == 0) mbQuery.append("recording:*");
-
-            try {
-                String urlStr = "https://musicbrainz.org/ws/2/recording/?query=" +
-                                URLEncoder.encode(mbQuery.toString(), "UTF-8") +
-                                "&fmt=json&limit=50&inc=artist-credits+tags";
-
-                URL url = new URL(urlStr);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setRequestProperty("User-Agent", "HarmoniQ/1.0 (dev)");
-
-                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                StringBuilder content = new StringBuilder();
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) content.append(inputLine);
-                in.close();
-                conn.disconnect();
-
-                // Parse JSON from MusicBrainz
-                JsonObject json = JsonParser.parseString(content.toString()).getAsJsonObject();
-                List<Song> songs = new ArrayList<>();
-
-                if (json.has("recordings")) {
-                    JsonArray recordings = json.getAsJsonArray("recordings");
-
-                    for (JsonElement recElem : recordings) {
-                        JsonObject rec = recElem.getAsJsonObject();
-                        String id = rec.get("id").getAsString();
-                        String title = rec.get("title").getAsString();
-
-                        // Artists
-                        List<String> artistsList = new ArrayList<>();
-                        if (rec.has("artist-credit")) {
-                            JsonArray artistCredit = rec.getAsJsonArray("artist-credit");
-                            for (JsonElement a : artistCredit) {
-                                JsonObject artistObj = a.getAsJsonObject();
-                                if (artistObj.has("name")) artistsList.add(artistObj.get("name").getAsString());
-                            }
-                        }
-
-                        // Genres / tags
-                        List<String> genresList = new ArrayList<>();
-                        if (rec.has("tags")) {
-                            JsonArray tags = rec.getAsJsonArray("tags");
-                            for (JsonElement t : tags) {
-                                JsonObject tagObj = t.getAsJsonObject();
-                                if (tagObj.has("name")) genresList.add(tagObj.get("name").getAsString());
-                            }
-                        }
-
-                        songs.add(new Song(id, title, artistsList, genresList));
+        
+            List<Song> finalResults = new ArrayList<>();
+        
+            // =====================================================
+            // CASE 1: ARTIST SEARCH
+            // =====================================================
+            if (!artist.isEmpty() && title.isEmpty()) {
+        
+                Integer artistId = ArtistDAO.findArtistIdByName(artist);
+        
+                // Use DB but allow refresh bypass
+                if (!refresh && artistId != null) {
+                    List<Song> dbSongs = SongDAO.findSongsByArtistId(artistId);
+        
+                    if (!dbSongs.isEmpty()) {
+                        Collections.shuffle(dbSongs);
+                        return gson.toJson(dbSongs);
                     }
                 }
-
-                return new Gson().toJson(songs);
-
-            } catch (Exception e) {
-                res.status(500);
-                return "{\"error\":\"" + e.getMessage() + "\"}";
+        
+                // Fetch from MusicBrainz
+                Artist mbArtist = MusicBrainzService.fetchArtist(artist);
+                if (mbArtist == null || mbArtist.getMbid() == null) return "[]";
+        
+                int newArtistId = ArtistDAO.saveArtist(
+                        mbArtist.getName(),
+                        mbArtist.getMbid()
+                );
+        
+                List<Song> fetchedSongs =
+                        MusicBrainzService.fetchSongs(mbArtist.getMbid());
+        
+                if (fetchedSongs == null) return "[]";
+        
+                Set<String> seen = new HashSet<>();
+        
+                for (Song s : fetchedSongs) {
+                    if (s.getId() == null) continue;
+        
+                    if (!seen.contains(s.getId())) {
+                        s.setArtists(Collections.singletonList(mbArtist.getName()));
+        
+                        SongDAO.saveSong(
+                                s.getTitle(),
+                                s.getId(),
+                                newArtistId
+                        );
+        
+                        finalResults.add(s);
+                        seen.add(s.getId());
+                    }
+                }
+        
+                Collections.shuffle(finalResults);
+                return gson.toJson(finalResults);
             }
+        
+            // =====================================================
+            // CASE 2: TITLE SEARCH
+            // =====================================================
+            if (!title.isEmpty() && artist.isEmpty()) {
+        
+                List<Song> globalSongs =
+                        MusicBrainzService.fetchSongsByTitle(title);
+        
+                if (globalSongs == null) return "[]";
+        
+                Set<String> seen = new HashSet<>();
+        
+                for (Song s : globalSongs) {
+        
+                    String firstArtist = s.getArtists().isEmpty()
+                            ? "Unknown Artist"
+                            : s.getArtists().get(0);
+        
+                    String key =
+                            s.getTitle().toLowerCase()
+                                    + "-"
+                                    + firstArtist.toLowerCase();
+        
+                    if (!seen.contains(key)) {
+                        finalResults.add(s);
+                        seen.add(key);
+                    }
+                }
+        
+                Collections.shuffle(finalResults);
+                return gson.toJson(finalResults);
+            }
+        
+            // =====================================================
+            // CASE 3: ARTIST + TITLE SEARCH
+            // =====================================================
+            if (!artist.isEmpty() && !title.isEmpty()) {
+        
+                List<Song> globalSongs =
+                        MusicBrainzService.fetchSongsByTitle(title);
+        
+                if (globalSongs == null) return "[]";
+        
+                Set<String> seen = new HashSet<>();
+        
+                for (Song s : globalSongs) {
+        
+                    boolean matchesArtist =
+                            s.getArtists().stream()
+                                    .anyMatch(a ->
+                                            a.toLowerCase()
+                                                    .contains(artist.toLowerCase())
+                                    );
+        
+                    if (!matchesArtist) continue;
+        
+                    String key =
+                            s.getTitle().toLowerCase()
+                                    + "-"
+                                    + s.getArtists().get(0).toLowerCase();
+        
+                    if (!seen.contains(key)) {
+                        finalResults.add(s);
+                        seen.add(key);
+                    }
+                }
+        
+                Collections.shuffle(finalResults);
+                return gson.toJson(finalResults);
+            }
+        
+            return gson.toJson(finalResults);
+        });
+
+
+      // ---------------- PLAYLIST ENDPOINTS ----------------
+
+        post("/playlists/add", (req, res) -> {
+            res.type("application/json");
+        
+            Map<String, Object> body = gson.fromJson(
+                    req.body(),
+                    new TypeToken<Map<String, Object>>() {}.getType()
+            );
+        
+            String username = (String) body.get("username");
+            String playlistName = (String) body.get("playlistName");
+            Map songMap = (Map) body.get("song");
+        
+            // =========================
+            // VALIDATION
+            // =========================
+            if (username == null || playlistName == null || songMap == null) {
+                res.status(400);
+        
+                Map<String, String> resp = new HashMap<>();
+                resp.put("status", "error");
+                resp.put("message", "Missing fields");
+        
+                return gson.toJson(resp);
+            }
+        
+            // =========================
+            // DEBUG INPUT
+            // =========================
+            System.out.println("=== ADD PLAYLIST REQUEST ===");
+            System.out.println("USERNAME: " + username);
+            System.out.println("PLAYLIST: " + playlistName);
+            System.out.println("SONG MAP: " + songMap);
+        
+            // =========================
+            // EXTRACT DATA
+            // =========================
+            List<String> artists = new ArrayList<>();
+            if (songMap.get("artists") instanceof List) {
+                for (Object a : (List<?>) songMap.get("artists")) {
+                    artists.add(a.toString());
+                }
+            }
+        
+            List<String> metadata =
+            MusicBrainzService.fetchGenresAndTags((String) songMap.get("id"));
+            
+            System.out.println("GENRES/TAGS SIZE: " + metadata.size()); 
+            System.out.println("GENRES/TAGS: " + metadata);
+            
+            List<String> relatedArtists = new ArrayList<>();
+            if (songMap.get("relatedArtists") instanceof List) {
+                for (Object r : (List<?>) songMap.get("relatedArtists")) {
+                    relatedArtists.add(r.toString());
+                }
+            }
+        
+            Song song = new Song(
+                    (String) songMap.get("id"),
+                    (String) songMap.get("title"),
+                    artists,
+                    metadata,
+                    relatedArtists
+                
+            );
+        
+            System.out.println("CREATED SONG: " + song.getTitle());
+        
+            // =========================
+            // SAVE TO DB
+            // =========================
+            try {
+                playlistDAO.addSong(username, playlistName, song);
+                System.out.println(" INSERT SUCCESS");
+            } catch (Exception e) {
+                System.out.println("INSERT FAILED");
+                e.printStackTrace();
+            }
+        
+            // =========================
+            // VERIFY DB AFTER INSERT
+            // =========================
+            List<Playlist> updatedPlaylists = playlistDAO.getPlaylists(username);
+        
+            System.out.println("AFTER INSERT PLAYLIST COUNT: " + updatedPlaylists.size());
+        
+            // EXTRA DEBUG 
+            if (updatedPlaylists.isEmpty()) {
+                System.out.println("STILL EMPTY AFTER INSERT → DB ISSUE");
+            }
+        
+            return gson.toJson(updatedPlaylists);
+        });
+
+
+        // Get all playlists for a user
+        get("/playlists", (req, res) -> {
+            res.type("application/json");
+
+            String username = req.queryParams("username");
+
+            if (username == null) {
+                res.status(400);
+                return gson.toJson(new ArrayList<>());
+            }
+
+            List<Playlist> playlists = playlistDAO.getPlaylists(username);
+            return gson.toJson(playlists);
+        });
+
+
+
+
+        get("/genres", (req, res) -> {
+            res.type("application/json");
+        
+            System.out.println(" /genres HIT");
+        
+            List<String> genres = MusicBrainzService.getAllGenres();
+        
+            System.out.println(" genres = " + genres);
+        
+            return gson.toJson(genres);
+        });
+
+        get("/songs/genre", (req, res) -> {
+            res.type("application/json");
+        
+            String genre = req.queryParams("genre");
+        
+            System.out.println(" /songs/genre HIT with genre = " + genre);
+        
+            if (genre == null || genre.isEmpty()) {
+                System.out.println(" genre is empty");
+                return "[]";
+            }
+        
+            List<Song> songs = MusicBrainzService.fetchSongsByGenre(genre);
+        
+            System.out.println(" songs returned BEFORE shuffle = " + songs.size());
+        
+            if (songs == null) {
+                System.out.println("songs is NULL");
+                return "[]";
+            }
+        
+            Collections.shuffle(songs);
+        
+            int limit = Math.min(10, songs.size());
+            List<Song> randomSongs = songs.subList(0, limit);
+        
+            System.out.println("returning songs = " + randomSongs.size());
+        
+            return gson.toJson(randomSongs);
+        });
+
+
+// =========================
+// GENRE FEEDBACK ROUTES
+// =========================
+
+
+
+        get("/user/top-genre", (req, res) -> {
+            res.type("application/json");
+
+            String username = req.queryParams("username");
+
+            Map<String, Object> result = new HashMap<>();
+
+            if (username == null || username.isEmpty()) {
+                result.put("topGenres", new ArrayList<>());
+                return gson.toJson(result);
+            }
+
+            List<String> topGenres = GenreFeedbackDAO.getTopGenres(username);
+
+            if (topGenres == null) {
+                topGenres = new ArrayList<>();
+            }
+
+            result.put("topGenres", topGenres);
+
+            return gson.toJson(result);
+        });
+
+
+
+        post("/feedback/genre-song", (req, res) -> {
+            res.type("application/json");
+        
+            JsonObject body = JsonParser.parseString(req.body()).getAsJsonObject();
+        
+            String genre = body.has("genre") && !body.get("genre").isJsonNull()
+                    ? body.get("genre").getAsString()
+                    : null;
+        
+            String type = body.has("type") && !body.get("type").isJsonNull()
+                    ? body.get("type").getAsString()
+                    : null;
+        
+            String username = body.has("username") && !body.get("username").isJsonNull()
+                    ? body.get("username").getAsString()
+                    : "guest";
+        
+            if (genre == null || type == null) {
+                res.status(400);
+        
+                Map<String, String> error = new HashMap<>();
+                error.put("status", "error");
+                error.put("message", "Missing fields");
+        
+                return gson.toJson(error);
+            }
+        
+            if ("like".equals(type)) {
+                GenreFeedbackDAO.like(username, genre);
+            } else {
+                GenreFeedbackDAO.dislike(username, genre);
+            }
+        
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "ok");
+        
+            return gson.toJson(response);
+        });
+
+
+
+        get("/debug/genre-scores", (req, res) -> {
+
+            String username = req.queryParams("username");
+        
+            Map<String, Integer> scores = GenreFeedbackDAO.getUserScores(username);
+        
+            System.out.println(" DEBUG SCORES = " + scores);
+        
+            return gson.toJson(scores);
+        });
+
+        
+
+        get("/recommendations/genre", (req, res) -> {
+            res.type("application/json");
+        
+            String username = req.queryParams("username");
+        
+            Map<String, Object> emptyResponse = new HashMap<>();
+            emptyResponse.put("topGenres", new ArrayList<>());
+            emptyResponse.put("songs", new ArrayList<>());
+        
+            if (username == null || username.isEmpty()) {
+                return gson.toJson(emptyResponse);
+            }
+        
+            List<String> topGenres = GenreFeedbackDAO.getTopGenres(username);
+        
+            if (topGenres == null || topGenres.isEmpty()) {
+                return gson.toJson(emptyResponse);
+            }
+        
+            // =========================
+            // COLLECT SONGS FROM ALL TOP GENRES
+            // =========================
+            List<Song> songs = new ArrayList<>();
+        
+            for (String genre : topGenres) {
+        
+                List<Song> genreSongs = MusicBrainzService.fetchSongsByGenre(genre);
+        
+                if (genreSongs != null) {
+                    songs.addAll(genreSongs);
+                }
+            }
+        
+            if (songs.isEmpty()) {
+                return gson.toJson(emptyResponse);
+            }
+        
+            // shuffle for variety (optional)
+            Collections.shuffle(songs);
+        
+            List<Song> result = songs.subList(0, Math.min(10, songs.size()));
+        
+            // =========================
+            // RESPONSE
+            // =========================
+            Map<String, Object> response = new HashMap<>();
+            response.put("topGenres", topGenres);   
+            response.put("songs", result);
+        
+            return gson.toJson(response);
+        });
+
+
+
+
+
+
+    
+
+
+
+        
+
+
+
+
+       
+
+        get("/recommendations", (req, res) -> {
+
+            res.type("application/json");
+        
+            String username = req.queryParams("username");
+        
+            if (username == null || username.trim().isEmpty()) {
+                return "[]";
+            }
+        
+            // 1. LOAD USER DATA
+            List<Playlist> playlists = playlistDAO.getPlaylists(username);
+        
+            if (playlists.isEmpty()) {
+                return "[]";
+            }
+        
+            // 2. BUILD USER PROFILE
+            UserProfile profile =
+                    RecommendationService.buildUserProfile(playlists);
+        
+            // 3. BUILD CANDIDATES 
+            List<Song> candidates =
+                    CandidateService.buildCandidates(profile);
+        
+            
+            
+            
+            
+                    // 4. GENERATE RECOMMENDATIONS
+            List<Song> recommendations =
+                    RecommendationService.recommend(profile, candidates);
+        
+            System.out.println("\n===== FINAL RECOMMENDATIONS SENT TO FRONTEND =====");
+
+            for (Song s : recommendations) {
+                System.out.println("SONG: " + s.getTitle());
+                System.out.println("ARTISTS: " + s.getArtists());
+            }
+            
+                    return new Gson().toJson(recommendations);
         });
     } 
-
 } 
-
-
 

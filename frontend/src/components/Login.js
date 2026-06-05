@@ -1,5 +1,12 @@
 import React, { useState } from "react";
 
+/**
+ * Login component handles user authentication.
+ */
+
+
+
+
 const API_URL = "http://localhost:8080";
 
 const Login = ({ onLogin }) => {
@@ -21,6 +28,7 @@ const Login = ({ onLogin }) => {
       const data = await res.json();
       if (data.status === "success") {
         localStorage.setItem("token", data.token);
+        
         setMessage("Login successful!");
         onLogin();
       } else {

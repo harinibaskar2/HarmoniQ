@@ -15,64 +15,72 @@ function App() {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        backgroundColor: "#000",
-        color: "#fff",
-        padding: "20px",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      {!loggedIn ? (
-        showRegister ? (
-          <>
-            <Register onRegister={() => setShowRegister(false)} />
-            <p style={{ textAlign: "center" }}>
-              Already have an account?{" "}
-              <button
-                onClick={() => setShowRegister(false)}
-                style={{
-                  padding: "5px 10px",
-                  borderRadius: "5px",
-                  border: "none",
-                  backgroundColor: "#ed859f",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                Login
-              </button>
-            </p>
-          </>
+    <PlaylistProvider>
+      <div
+        style={{
+          minHeight: "100vh",
+          backgroundColor: "#000",
+          color: "#fff",
+          padding: "20px",
+          fontFamily: "Arial, sans-serif",
+        }}
+      >
+        {!loggedIn ? (
+          showRegister ? (
+            <>
+              <Register onRegister={() => setShowRegister(false)} />
+              <p style={{ textAlign: "center" }}>
+                Already have an account?{" "}
+                <button
+                  onClick={() => setShowRegister(false)}
+                  style={{
+                    padding: "5px 10px",
+                    borderRadius: "5px",
+                    border: "none",
+                    backgroundColor: "#ed859f",
+                    color: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Login
+                </button>
+              </p>
+            </>
+          ) : (
+            <>
+              <Login onLogin={handleLogin} />
+              <p style={{ textAlign: "center" }}>
+                Don't have an account?{" "}
+                <button
+                  onClick={() => setShowRegister(true)}
+                  style={{
+                    padding: "5px 10px",
+                    borderRadius: "5px",
+                    border: "none",
+                    backgroundColor: "#ed859f",
+                    color: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Register
+                </button>
+              </p>
+            </>
+          )
         ) : (
           <>
-            <Login onLogin={handleLogin} />
-            <p style={{ textAlign: "center" }}>
-              Don't have an account?{" "}
-              <button
-                onClick={() => setShowRegister(true)}
-                style={{
-                  padding: "5px 10px",
-                  borderRadius: "5px",
-                  border: "none",
-                  backgroundColor: "#ed859f",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                Register
-              </button>
-            </p>
-          </>
-        )
-      ) : (
-        <>
-          <h2 style={{ textAlign: "center" }}>Welcome! You are logged in ✅</h2>
-          <div style={{ textAlign: "center", marginBottom: "30px" }}>
+            <h2 style={{ textAlign: "center" }}>Welcome! You are logged in ✅</h2>
+
+            {/* Tabs fill the main area */}
+            <Tabs />
+
+            {/* Logout button fixed at bottom-right */}
             <button
               onClick={handleLogout}
               style={{
+                position: "fixed",
+                bottom: "20px",
+                right: "20px",
                 padding: "10px 20px",
                 border: "none",
                 borderRadius: "5px",
@@ -83,16 +91,13 @@ function App() {
             >
               Logout
             </button>
-          </div>
-
-          {/* Music App */}
-          <PlaylistProvider>
-            <Tabs />
-          </PlaylistProvider>
-        </>
-      )}
-    </div>
+          </>
+        )}
+      </div>
+    </PlaylistProvider>
   );
 }
 
 export default App;
+
+

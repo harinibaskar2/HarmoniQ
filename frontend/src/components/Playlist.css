@@ -1,0 +1,189 @@
+/* ================= GLOBAL ================= */
+body {
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  background-color: #f4f6f8;
+  color: #111;
+}
+
+.playlist-container {
+  max-width: 800px;
+  margin: 30px auto;
+  font-family: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  color: #111;
+}
+
+/* ================= SECTION HEADINGS ================= */
+.playlist-container h2 {
+  background-color: #ffffff;
+  color: #111;
+
+  padding: 10px 15px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+
+  margin: 20px 0 10px 0;
+}
+
+/* ================= TABS ================= */
+.playlist-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+
+.playlist-tab {
+  padding: 10px 20px;
+  border-radius: 25px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  color: #111;
+  font-weight: 500;
+}
+
+.playlist-tab:hover {
+  background-color: #f0f0f0;
+}
+
+.playlist-tab.active {
+  background-color: #007bff;
+  color: #fff;
+  border-color: #007bff;
+}
+
+/* ================= SONG BOX ================= */
+.songs-dropdown {
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 15px;
+  background-color: #fff;
+  max-height: 400px;
+  overflow-y: auto;
+  animation: dropdown 0.3s ease;
+
+  color: #111;
+}
+
+/* ================= ANIMATION ================= */
+@keyframes dropdown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= SONG LIST ================= */
+.songs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* ================= SONG ITEM ================= */
+.song-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+
+  background-color: #fff;
+
+  color: #111;
+  font-size: 15px;
+  font-weight: 500;
+
+  transition: background-color 0.2s ease;
+}
+
+.song-item:hover {
+  background-color: #f5f5f5;
+}
+
+.song-item span {
+  color: #111;
+}
+
+/* ================= DELETE BUTTON ================= */
+.delete-btn {
+  background-color: #ff4d4f;
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.song-item:hover .delete-btn {
+  opacity: 1;
+}
+
+/* ================= ADD BUTTON ================= */
+.add-btn {
+  background-color: #1db954;
+  color: #fff;
+
+  border: none;
+  padding: 5px 10px;
+  border-radius: 6px;
+
+  cursor: pointer;
+
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.song-item:hover .add-btn {
+  opacity: 1;
+}
+
+.add-btn:hover {
+  background-color: #17a74a;
+}
+
+/* ================= RECOMMENDATIONS ================= */
+.recommendations-section {
+  margin-top: 40px;
+
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+
+  padding: 15px;
+
+  color: #111;
+}
+
+.recommendations-section h2 {
+  background-color: #ffffff;
+  color: #111;
+
+  padding: 10px 15px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+
+  margin-bottom: 10px;
+}
+
+/* ================= EMPTY STATE ================= */
+.no-songs {
+  background-color: #ffffff;
+  color: #111;
+
+  padding: 10px 15px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+
+  font-style: normal;
+}

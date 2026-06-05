@@ -1,0 +1,257 @@
+package com.harmoniq;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+
+
+/**
+ * Data Access Object (DAO) for managing user playlists and playlist songs.
+ *
+ * Handles creation of playlist tables, retrieval of user playlists,
+ * and adding songs to playlists in the SQLite database.
+ *
+ * Each playlist is associated with a username and can contain
+ * multiple songs stored in a separate playlist_songs table.
+ *
+ * @author Harini Baskar
+ */
+
+
+public class PlaylistDAO {
+
+    private static final String DB_URL = DBConfig.DB_URL;
+
+    public PlaylistDAO() {
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             Statement stmt = conn.createStatement()) {
+
+            // ======================
+            // PLAYLIST TABLE
+            // ======================
+            String playlistsTable =
+                    "CREATE TABLE IF NOT EXISTS playlists (" +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                            "username TEXT NOT NULL," +
+                            "name TEXT NOT NULL," +
+                            "UNIQUE(username, name)" +
+                            ")";
+
+            stmt.execute(playlistsTable);
+
+            // ======================
+            // SONGS TABLE
+            // ======================
+            String songsTable =
+                    "CREATE TABLE IF NOT EXISTS playlist_songs (" +
+                            "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                            "playlist_id INTEGER NOT NULL," +
+                            "song_mbid TEXT," +
+                            "song_title TEXT NOT NULL," +
+                            "artist TEXT," +
+                            "genres TEXT," +
+                            "FOREIGN KEY(playlist_id) REFERENCES playlists(id)" +
+                            ")";
+
+            stmt.execute(songsTable);
+
+            System.out.println(" Tables initialized");
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // =====================================================
+    // GET PLAYLISTS
+    // =====================================================
+    public List<Playlist> getPlaylists(String username) {
+
+        List<Playlist> playlists = new ArrayList<>();
+
+        String sql = "SELECT * FROM playlists WHERE username = ?";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, username);
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+
+                int playlistId = rs.getInt("id");
+                Playlist playlist = new Playlist(rs.getString("name"));
+
+                System.out.println("Playlist found: " + playlist.getName());
+
+                String songSql = "SELECT * FROM playlist_songs WHERE playlist_id = ?";
+
+                try (PreparedStatement psSongs = conn.prepareStatement(songSql)) {
+
+                    psSongs.setInt(1, playlistId);
+
+                    ResultSet rsSongs = psSongs.executeQuery();
+
+                    while (rsSongs.next()) {
+
+                        List<String> artists = new ArrayList<>();
+                        artists.add(rsSongs.getString("artist"));
+
+                        List<String> genres = new ArrayList<>();
+
+                        String genreStr = rsSongs.getString("genres");
+                        if (genreStr != null && !genreStr.isEmpty()) {
+                            for (String g : genreStr.split(",")) {
+                                genres.add(g.trim());
+                            }
+                        }
+
+                        Song song = new Song(
+                                rsSongs.getString("song_mbid"),
+                                rsSongs.getString("song_title"),
+                                artists,
+                                genres,
+                                new ArrayList<>()
+                        );
+
+                        playlist.addSong(song);
+                    }
+                }
+
+                System.out.println("SONGS IN PLAYLIST = " + playlist.getSongs().size());
+
+                playlists.add(playlist);
+            }
+
+            System.out.println("TOTAL PLAYLISTS = " + playlists.size());
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return playlists;
+    }
+
+    // =====================================================
+    // ADD SONG
+    // =====================================================
+    public void addSong(String username, String playlistName, Song song) {
+
+        System.out.println("\n ADD SONG CALLED");
+
+        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+
+            int playlistId = -1;
+
+            // FIND PLAYLIST
+            String find = "SELECT id FROM playlists WHERE username = ? AND name = ?";
+
+            try (PreparedStatement ps = conn.prepareStatement(find)) {
+                ps.setString(1, username);
+                ps.setString(2, playlistName);
+
+                ResultSet rs = ps.executeQuery();
+
+                if (rs.next()) {
+                    playlistId = rs.getInt("id");
+                }
+            }
+
+            // CREATE IF NOT EXISTS
+            if (playlistId == -1) {
+
+                String insertPlaylist =
+                        "INSERT INTO playlists(username, name) VALUES(?, ?)";
+
+                try (PreparedStatement ps =
+                             conn.prepareStatement(insertPlaylist, Statement.RETURN_GENERATED_KEYS)) {
+
+                    ps.setString(1, username);
+                    ps.setString(2, playlistName);
+
+                    ps.executeUpdate();
+
+                    ResultSet keys = ps.getGeneratedKeys();
+                    if (keys.next()) {
+                        playlistId = keys.getInt(1);
+                    }
+                }
+            }
+
+            System.out.println("playlistId = " + playlistId);
+
+            // INSERT SONG
+            String insertSong =
+                    "INSERT INTO playlist_songs " +
+                            "(playlist_id, song_mbid, song_title, artist, genres) " +
+                            "VALUES (?, ?, ?, ?, ?)";
+
+            try (PreparedStatement ps = conn.prepareStatement(insertSong)) {
+
+                ps.setInt(1, playlistId);
+                ps.setString(2, song.getId());
+                ps.setString(3, song.getTitle());
+
+                ps.setString(4,
+                        (song.getArtists() == null || song.getArtists().isEmpty())
+                                ? "Unknown"
+                                : song.getArtists().get(0)
+                );
+
+                ps.setString(5,
+                        (song.getGenres() == null || song.getGenres().isEmpty())
+                                ? ""
+                                : String.join(",", song.getGenres())
+                );
+
+                int rows = ps.executeUpdate();
+                System.out.println("ROWS INSERTED = " + rows);
+            }
+
+            debugSongs();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // =====================================================
+    // DEBUG
+    // =====================================================
+    public void debugSongs() {
+
+        String sql = "SELECT * FROM playlist_songs";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            System.out.println("\n=== ALL SONGS ===");
+
+            boolean found = false;
+
+            while (rs.next()) {
+                found = true;
+                System.out.println(
+                        rs.getInt("playlist_id") + " | " +
+                                rs.getString("song_title") + " | " +
+                                rs.getString("artist")
+                );
+            }
+
+            if (!found) {
+                System.out.println(" NO SONGS FOUND");
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}

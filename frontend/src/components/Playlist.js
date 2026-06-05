@@ -1,53 +1,136 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import { PlaylistContext } from "../context/PlaylistContext";
+import "./Playlist.css";
 
-const Playlist = ({ selectedPlaylist, setSelectedPlaylist }) => {
-  const { playlists } = useContext(PlaylistContext);
+const Playlist = () => {
+  const {
+    playlists,
+    recommendations,
+    removeSongFromPlaylist,
+    addSongToPlaylist,
+  } = useContext(PlaylistContext);
+
+  const [activePlaylist, setActivePlaylist] = useState(null);
+
+  const username = "sanjay";
+
+  // Remove duplicate recommendations (same title + artists)
+  const uniqueRecommendations = [
+    ...new Map(
+      recommendations.map((song) => [
+        `${song.title?.toLowerCase()}-${(song.artists || [])
+          .join(",")
+          .toLowerCase()}`,
+        song,
+      ])
+    ).values(),
+  ];
+
+  const togglePlaylist = (name) => {
+    setActivePlaylist((prev) => (prev === name ? null : name));
+  };
+
+  const handleDelete = (playlistName, songId, songTitle) => {
+    if (window.confirm(`Are you sure you want to delete "${songTitle}"?`)) {
+      removeSongFromPlaylist(playlistName, songId);
+    }
+  };
 
   return (
-    <div>
+    <div className="playlist-container">
       <h2>Your Playlists</h2>
 
-      {/* Playlist selector */}
-      <select
-        value={selectedPlaylist || ""}
-        onChange={(e) => setSelectedPlaylist(e.target.value)}
-        style={{ padding: "5px 10px", borderRadius: "5px", marginBottom: "20px" }}
-      >
-        <option value="">-- Select Playlist --</option>
-        {playlists.map((p) => (
-          <option key={p.name} value={p.name}>
-            {p.name}
-          </option>
+      {/* ================= PLAYLIST TABS ================= */}
+      <div className="playlist-tabs">
+        {playlists.map((playlist) => (
+          <button
+            key={playlist.name}
+            className={`playlist-tab ${
+              activePlaylist === playlist.name ? "active" : ""
+            }`}
+            onClick={() => togglePlaylist(playlist.name)}
+          >
+            {playlist.name}
+          </button>
         ))}
-      </select>
+      </div>
 
-      {selectedPlaylist && (
-        <>
-          {playlists.find((p) => p.name === selectedPlaylist)?.songs.length === 0 ? (
-            <p>No songs added yet.</p>
+      {/* ================= SONGS ================= */}
+      {activePlaylist && (
+        <div className="songs-dropdown">
+          {playlists.find((p) => p.name === activePlaylist)?.songs.length ===
+          0 ? (
+            <p className="no-songs">No songs added yet.</p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <ul className="songs-list">
               {playlists
-                .find((p) => p.name === selectedPlaylist)
+                .find((p) => p.name === activePlaylist)
                 .songs.map((song) => (
-                  <div
-                    key={song.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "5px 0",
-                      borderBottom: "1px solid #333",
+                  <li key={song.id} className="song-item">
+                    <span>
+                      {song.title} —{" "}
+                      {Array.isArray(song.artists)
+                        ? song.artists.join(", ")
+                        : song.artists || "Unknown Artist"}
+                    </span>
+
+                    <button
+                      className="delete-btn"
+                      onClick={() =>
+                        handleDelete(activePlaylist, song.id, song.title)
+                      }
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* ================= RECOMMENDATIONS ================= */}
+      <div style={{ marginTop: "40px" }}>
+        <h2>Recommended for You 🔥</h2>
+
+        {uniqueRecommendations.length === 0 ? (
+          <p className="no-songs">No recommendations yet</p>
+        ) : (
+          <ul className="songs-list">
+            {uniqueRecommendations.map((song) => {
+              console.log("SONG FROM BACKEND:", song);
+
+              return (
+                <li key={song.id} className="song-item">
+                  <div>
+                    <div style={{ fontWeight: "600" }}>
+                      {song.title}
+                    </div>
+
+                    <div style={{ fontSize: "13px", color: "#666" }}>
+                      {Array.isArray(song.artists)
+                        ? song.artists.join(", ")
+                        : song.artists || "Unknown Artist"}
+                    </div>
+                  </div>
+
+                  <button
+                    className="add-btn"
+                    onClick={() => {
+                      const playlistName = prompt("Add to which playlist?");
+                      if (!playlistName) return;
+
+                      addSongToPlaylist(playlistName, song);
                     }}
                   >
-                    <span>{song.title} — {song.artists?.join(", ")}</span>
-                  </div>
-                ))}
-            </div>
-          )}
-        </>
-      )}
+                    + Add
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 };
