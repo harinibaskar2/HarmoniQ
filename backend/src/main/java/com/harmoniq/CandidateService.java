@@ -7,10 +7,28 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
+
+
+
+/**
+ * Service class responsible for generating candidate songs
+ * for the recommendation system.
+ *
+ * Uses artists from a user's profile to retrieve songs and
+ * build a list of unique recommendation candidates.
+ *
+ * @author Harini Baskar 
+ */
+
+
 public class CandidateService {
 
     private static final int MAX_SONGS_PER_ARTIST = 20;
     private static final int MAX_TOTAL_ARTISTS = 30;
+
+
+
+
 
     public static List<Song> buildCandidates(UserProfile profile) {
 
@@ -35,17 +53,17 @@ public class CandidateService {
 
             if (!seenArtists.add(normalized)) continue;
 
-            System.out.println("\n🔎 Fetching songs for artist: " + normalized);
+            System.out.println("\n Fetching songs for artist: " + normalized);
 
             List<Song> songs =
                     MusicBrainzCachedService.getSongsByArtist(normalized);
 
             if (songs == null || songs.isEmpty()) {
-                System.out.println("⚠️ No songs returned for: " + normalized);
+                System.out.println(" No songs returned for: " + normalized);
                 continue;
             }
 
-            System.out.println("🎵 Songs returned: " + songs.size());
+            System.out.println("Songs returned: " + songs.size());
 
             // DEBUG: show raw songs from API layer
             for (Song s : songs) {
@@ -64,6 +82,10 @@ public class CandidateService {
 
         return candidates;
     }
+
+
+
+ 
 
     private static void addSongs(
             List<Song> songs,

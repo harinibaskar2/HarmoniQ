@@ -9,6 +9,20 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+
+/**
+ * Data Access Object (DAO) for managing user playlists and playlist songs.
+ *
+ * Handles creation of playlist tables, retrieval of user playlists,
+ * and adding songs to playlists in the SQLite database.
+ *
+ * Each playlist is associated with a username and can contain
+ * multiple songs stored in a separate playlist_songs table.
+ *
+ * @author Harini Baskar
+ */
+
+
 public class PlaylistDAO {
 
     private static final String DB_URL = DBConfig.DB_URL;
@@ -47,7 +61,7 @@ public class PlaylistDAO {
 
             stmt.execute(songsTable);
 
-            System.out.println("✅ Tables initialized");
+            System.out.println(" Tables initialized");
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -130,7 +144,7 @@ public class PlaylistDAO {
     // =====================================================
     public void addSong(String username, String playlistName, Song song) {
 
-        System.out.println("\n🔥 ADD SONG CALLED");
+        System.out.println("\n ADD SONG CALLED");
 
         try (Connection conn = DriverManager.getConnection(DB_URL)) {
 
@@ -233,7 +247,7 @@ public class PlaylistDAO {
             }
 
             if (!found) {
-                System.out.println("❌ NO SONGS FOUND");
+                System.out.println(" NO SONGS FOUND");
             }
 
         } catch (SQLException e) {

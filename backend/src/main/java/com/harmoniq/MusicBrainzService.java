@@ -50,7 +50,7 @@ public class MusicBrainzService {
                 }
     
             } catch (Exception e) {
-                System.out.println("❌ fetchArtist failed: " + e.getMessage());
+                System.out.println(" fetchArtist failed: " + e.getMessage());
             }
     
             return null;
@@ -95,7 +95,7 @@ public class MusicBrainzService {
 
                     JsonObject ac = acElem.getAsJsonObject();
 
-                    // Case 1: nested artist object (MOST COMMON)
+                    // Case 1: nested artist object 
                     if (ac.has("artist")) {
                         JsonObject artistObj = ac.getAsJsonObject("artist");
 
@@ -127,7 +127,7 @@ public class MusicBrainzService {
         }
 
     } catch (Exception e) {
-        System.out.println("❌ fetchSongs failed: " + e.getMessage());
+        System.out.println(" fetchSongs failed: " + e.getMessage());
     }
 
     return songs;
@@ -198,7 +198,7 @@ public class MusicBrainzService {
             }
 
         } catch (Exception e) {
-            System.out.println("❌ fetchSongsByTitle failed: " + e.getMessage());
+            System.out.println(" fetchSongsByTitle failed: " + e.getMessage());
         }
 
         return songs;
@@ -242,30 +242,30 @@ public class MusicBrainzService {
 
                 String response = sendGet(urlStr);
 
-                // 🔥 DEBUG 1: raw response
+                //  DEBUG 1: raw response
                 System.out.println("\n===== RELATED ARTISTS RAW RESPONSE =====");
                 System.out.println(response);
 
                 JsonObject json = JsonParser.parseString(response).getAsJsonObject();
 
-                // 🔥 DEBUG 2: full parsed JSON
+                //  DEBUG 2: full parsed JSON
                 System.out.println("\n===== RELATED ARTISTS PARSED JSON =====");
                 System.out.println(json);
 
                 if (!json.has("relations")) {
-                    System.out.println("⚠️ No 'relations' field found for MBID: " + id);
+                    System.out.println("No 'relations' field found for MBID: " + id);
                     return related;
                 }
 
                 JsonArray relations = json.getAsJsonArray("relations");
 
-                System.out.println("🔎 Number of relations found: " + relations.size());
+                System.out.println(" Number of relations found: " + relations.size());
 
                 for (JsonElement elem : relations) {
 
                     JsonObject rel = elem.getAsJsonObject();
 
-                    System.out.println("➡️ Relation object: " + rel);
+                    System.out.println(" Relation object: " + rel);
 
                     if (rel.has("artist")) {
                         JsonObject artistObj = rel.getAsJsonObject("artist");
@@ -274,7 +274,7 @@ public class MusicBrainzService {
 
                             String name = artistObj.get("name").getAsString();
 
-                            System.out.println("🎯 Related artist found: " + name);
+                            System.out.println(" Related artist found: " + name);
 
                             related.add(name);
                         }
@@ -282,22 +282,19 @@ public class MusicBrainzService {
                 }
 
             } catch (Exception e) {
-                System.out.println("❌ fetchRelatedArtists failed: " + e.getMessage());
+                System.out.println(" fetchRelatedArtists failed: " + e.getMessage());
             }
 
-            System.out.println("✅ FINAL RELATED ARTISTS LIST: " + related);
+            System.out.println(" FINAL RELATED ARTISTS LIST: " + related);
 
             return related;
         });
     }
 
 
-    // =====================================================
-// FETCH METADATA (GENRES + TAGS + MOODS)
-// =====================================================
-// =====================================================
+
     // FETCH GENRES + TAGS (FIXED VERSION)
-    // Uses release-group FIRST (correct source of truth)
+    // Uses release-group FIRST
     // =====================================================
     public static List<String> fetchGenresAndTags(String recordingId) {
 
@@ -330,9 +327,9 @@ public class MusicBrainzService {
             }
 
             // DEBUG
-            System.out.println("🎯 Release Group ID: " + releaseGroupId);
+            System.out.println(" Release Group ID: " + releaseGroupId);
 
-            // STEP 2: If we got release-group → fetch genres properly
+  
             if (releaseGroupId != null) {
 
                 String rgUrl =
@@ -343,7 +340,7 @@ public class MusicBrainzService {
                 String rgResponse = sendGet(rgUrl);
                 JsonObject rgJson = JsonParser.parseString(rgResponse).getAsJsonObject();
 
-                System.out.println("📦 Release-group response received");
+                System.out.println(" Release-group response received");
 
                 // =========================
                 // GENRES (PRIMARY SOURCE)
@@ -389,7 +386,7 @@ public class MusicBrainzService {
             // STEP 3: FALLBACK (recording tags only if release-group empty)
             if (metadata.isEmpty()) {
 
-                System.out.println("⚠️ Falling back to recording-level tags");
+                System.out.println(" Falling back to recording-level tags");
 
                 String fallbackUrl =
                         "https://musicbrainz.org/ws/2/recording/" +
@@ -419,10 +416,10 @@ public class MusicBrainzService {
             }
 
         } catch (Exception e) {
-            System.out.println("❌ fetchGenresAndTags failed: " + e.getMessage());
+            System.out.println(" fetchGenresAndTags failed: " + e.getMessage());
         }
 
-        System.out.println("🎧 FINAL METADATA: " + metadata);
+        System.out.println(" FINAL METADATA: " + metadata);
 
         return metadata;
     }

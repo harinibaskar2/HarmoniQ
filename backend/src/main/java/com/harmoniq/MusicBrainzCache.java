@@ -1,10 +1,23 @@
 package com.harmoniq;
 
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
-import java.util.List;
-import java.util.concurrent.TimeUnit;
+
+/**
+ * Cache layer for storing MusicBrainz API responses.
+ *
+ * Uses Caffeine caching to improve performance by reducing
+ * repeated API calls for artists, songs, and related artists.
+ *
+ * Cached data is automatically expired after a set time to
+ * ensure freshness of music information.
+ *
+ * @author Harini Baskar
+ */
 
 public class MusicBrainzCache {
 

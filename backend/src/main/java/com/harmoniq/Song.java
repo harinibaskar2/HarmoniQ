@@ -9,6 +9,17 @@ public class Song {
     private List<String> genres;
     private List<String> relatedArtists;
 
+
+    /**
+ * Represents a song in the HarmoniQ system.
+ *
+ * A Song contains metadata such as its ID, title, artists,
+ * genres, and related artists. This information is used for
+ * searching, storing, and generating recommendations.
+ *
+ * @author Harini Baskar
+ */
+
     public Song() {}
 
     public Song(String id, String title, List<String> artists, List<String> genres, List<String> relatedArtists) {

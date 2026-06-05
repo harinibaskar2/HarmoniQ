@@ -1,3 +1,20 @@
+
+/**
+ * Discover component for searching and browsing songs.
+ *
+ * Allows users to:
+ * - Search songs by artist and/or title
+ * - Fetch results from the backend API
+ * - Add songs to a playlist
+ *
+ * This component communicates with the backend `/songs` endpoint
+ * and uses PlaylistContext to manage playlist updates.
+ */
+
+
+
+
+
 import React, { useState, useContext } from "react";
 import { PlaylistContext } from "../context/PlaylistContext";
 
@@ -10,7 +27,7 @@ export default function Discover() {
 
   const { addSongToPlaylist } = useContext(PlaylistContext);
 
-  // ✅ Search + Refresh logic
+  //  Search + Refresh logic
   const fetchSongs = async () => {
     if (!artist.trim() && !title.trim()) {
       alert("Enter artist or title to search");
@@ -25,7 +42,7 @@ export default function Discover() {
       if (artist.trim()) params.append("artist", artist.trim());
       if (title.trim()) params.append("title", title.trim());
 
-      // ⭐ Prevent browser caching + force backend refresh
+      // Prevent browser caching + force backend refresh
       params.append("t", Date.now());
 
       const res = await fetch(

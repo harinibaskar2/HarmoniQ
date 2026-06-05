@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from "react";
 
+
+
+
+
+ /**
+  * Temporary hardcoded username used to simulate an authenticated user during development.
+  *
+  * This enables testing of user-specific recommendation features. In a production application, this would be replaced with actual authentication logic to determine the logged-in user.
+  */
+
+
 function GenreRecommendations() {
 
   const [songs, setSongs] = useState([]);
@@ -22,13 +33,13 @@ function GenreRecommendations() {
       .then((res) => res.json())
       .then((data) => {
 
-        console.log("✅ Genre recommendations:", data);
+        console.log(" Genre recommendations:", data);
 
         setTopGenre(data.topGenre || "");
         setSongs(data.songs || []);
       })
       .catch((err) =>
-        console.error("❌ Failed to fetch recommendations:", err)
+        console.error(" Failed to fetch recommendations:", err)
       )
       .finally(() => setLoading(false));
   };

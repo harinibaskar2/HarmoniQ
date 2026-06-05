@@ -26,6 +26,20 @@ import static spark.Spark.port;
 import static spark.Spark.post;
 import static spark.Spark.staticFiles;
 
+
+/**
+ * Main entry point for the HarmoniQ backend application.
+ *
+ * Configures and starts the Spark Java web server, initializes
+ * the database, handles user authentication, playlist management,
+ * song search, genre feedback, and music recommendation endpoints.
+ *
+ * This class acts as the central controller that connects the
+ * frontend, database, and recommendation services.
+ *
+ * @author Harini Baskar 
+ */
+
 public class Main {
 
     private static final Map<String, String> users = new HashMap<>();
@@ -35,10 +49,10 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
 
-        // 🔹 Initialize database tables
+        // Initialize database tables
     Database.initialize();
 
-    // 🔹 Create PlaylistDAO instance
+    // Create PlaylistDAO instance
     final PlaylistDAO playlistDAO = new PlaylistDAO();
     UserDAO userDAO = new UserDAO();
 
@@ -81,7 +95,7 @@ public class Main {
         });
 
         // Health check
-        get("/health", (req, res) -> "HarmoniQ backend running 🚀");
+        get("/health", (req, res) -> "HarmoniQ backend running ");
 
         // ---------------- REGISTER ----------------
         post("/register", (req, res) -> {
@@ -171,7 +185,7 @@ public class Main {
         
                 Integer artistId = ArtistDAO.findArtistIdByName(artist);
         
-                // ⭐ Use DB but allow refresh bypass
+                // Use DB but allow refresh bypass
                 if (!refresh && artistId != null) {
                     List<Song> dbSongs = SongDAO.findSongsByArtistId(artistId);
         
@@ -291,7 +305,7 @@ public class Main {
         
             return gson.toJson(finalResults);
         });
-        // ---------------- PLAYLIST ENDPOINTS ----------------
+
 
       // ---------------- PLAYLIST ENDPOINTS ----------------
 
@@ -367,9 +381,9 @@ public class Main {
             // =========================
             try {
                 playlistDAO.addSong(username, playlistName, song);
-                System.out.println("✅ INSERT SUCCESS");
+                System.out.println(" INSERT SUCCESS");
             } catch (Exception e) {
-                System.out.println("❌ INSERT FAILED");
+                System.out.println("INSERT FAILED");
                 e.printStackTrace();
             }
         
@@ -380,9 +394,9 @@ public class Main {
         
             System.out.println("AFTER INSERT PLAYLIST COUNT: " + updatedPlaylists.size());
         
-            // EXTRA DEBUG (VERY IMPORTANT)
+            // EXTRA DEBUG 
             if (updatedPlaylists.isEmpty()) {
-                System.out.println("❌ STILL EMPTY AFTER INSERT → DB ISSUE");
+                System.out.println("STILL EMPTY AFTER INSERT → DB ISSUE");
             }
         
             return gson.toJson(updatedPlaylists);
@@ -410,11 +424,11 @@ public class Main {
         get("/genres", (req, res) -> {
             res.type("application/json");
         
-            System.out.println("🔥 /genres HIT");
+            System.out.println(" /genres HIT");
         
             List<String> genres = MusicBrainzService.getAllGenres();
         
-            System.out.println("🎧 genres = " + genres);
+            System.out.println(" genres = " + genres);
         
             return gson.toJson(genres);
         });
@@ -424,19 +438,19 @@ public class Main {
         
             String genre = req.queryParams("genre");
         
-            System.out.println("🔥 /songs/genre HIT with genre = " + genre);
+            System.out.println(" /songs/genre HIT with genre = " + genre);
         
             if (genre == null || genre.isEmpty()) {
-                System.out.println("❌ genre is empty");
+                System.out.println(" genre is empty");
                 return "[]";
             }
         
             List<Song> songs = MusicBrainzService.fetchSongsByGenre(genre);
         
-            System.out.println("🎧 songs returned BEFORE shuffle = " + songs.size());
+            System.out.println(" songs returned BEFORE shuffle = " + songs.size());
         
             if (songs == null) {
-                System.out.println("❌ songs is NULL");
+                System.out.println("songs is NULL");
                 return "[]";
             }
         
@@ -445,12 +459,12 @@ public class Main {
             int limit = Math.min(10, songs.size());
             List<Song> randomSongs = songs.subList(0, limit);
         
-            System.out.println("✅ returning songs = " + randomSongs.size());
+            System.out.println("returning songs = " + randomSongs.size());
         
             return gson.toJson(randomSongs);
         });
 
-        // =========================
+
 // =========================
 // GENRE FEEDBACK ROUTES
 // =========================
@@ -529,7 +543,7 @@ public class Main {
         
             Map<String, Integer> scores = GenreFeedbackDAO.getUserScores(username);
         
-            System.out.println("🔥 DEBUG SCORES = " + scores);
+            System.out.println(" DEBUG SCORES = " + scores);
         
             return gson.toJson(scores);
         });
@@ -582,7 +596,7 @@ public class Main {
             // RESPONSE
             // =========================
             Map<String, Object> response = new HashMap<>();
-            response.put("topGenres", topGenres);   // ✅ FIXED (was topGenre)
+            response.put("topGenres", topGenres);   
             response.put("songs", result);
         
             return gson.toJson(response);
@@ -625,7 +639,7 @@ public class Main {
             UserProfile profile =
                     RecommendationService.buildUserProfile(playlists);
         
-            // 3. BUILD CANDIDATES (IMPORTANT STEP YOU ADD HERE)
+            // 3. BUILD CANDIDATES 
             List<Song> candidates =
                     CandidateService.buildCandidates(profile);
         

@@ -3,12 +3,26 @@ package com.harmoniq;
 import java.util.HashMap;
 import java.util.Map;
 
+
+
+/**
+ * Represents a user preference profile used for music recommendations.
+ *
+ * Stores weighted information about the user's listening habits,
+ * including artists, related artists, and genres.
+ *
+ * These weights are used in the content-based filtering algorithm
+ * to generate personalized song recommendations.
+ *
+ * @author Harini Baskar
+ */
+
 public class UserProfile {
 
     // artist -> weight (how much user likes them)
     private Map<String, Integer> artistWeights = new HashMap<>();
 
-    // related artist signal (we treat same as artists but separated for clarity)
+    // related artist signal 
     private Map<String, Integer> relatedArtistWeights = new HashMap<>();
 
     private Map<String, Integer> genreWeights = new HashMap<>();
@@ -60,7 +74,7 @@ public class UserProfile {
     }
 
     // =========================
-    // TOP RELATED ARTIST (OPTIONAL)
+    // TOP RELATED ARTIST 
     // =========================
     public String getTopRelatedArtist() {
 

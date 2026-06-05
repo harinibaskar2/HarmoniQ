@@ -7,6 +7,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+
+/**
+ * Data Access Object (DAO) for managing user accounts in the database.
+ *
+ * Handles creation of the users table and provides methods for
+ * adding users and retrieving user information.
+ *
+ * This class acts as the persistence layer for user authentication
+ * and registration.
+ *
+ * @author Harini Baskar
+ */
+
 public class UserDAO {
 
 
@@ -67,7 +80,7 @@ public class UserDAO {
         return null;
     }
 
-    // ✅ NEW helper
+    //  New helper
     public Integer getUserId(String username) {
         User user = getUserByUsername(username);
         return (user != null) ? user.getId() : null;

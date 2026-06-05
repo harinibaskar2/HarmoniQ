@@ -1,5 +1,12 @@
 import React, { useState } from "react";
 
+/**
+ * Login component handles user authentication.
+ */
+
+
+
+
 const API_URL = "http://localhost:8080";
 
 const Login = ({ onLogin }) => {

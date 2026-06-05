@@ -6,10 +6,23 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
+
+
+/**
+ * Data Access Object (DAO) for managing song records in the database.
+ *
+ * Provides methods to retrieve songs by artist or title, and to
+ * store song information in the SQLite database.
+ *
+ * Acts as the persistence layer between the application and the
+ * songs database table.
+ *
+ * @author Harini Baskar 
+ */
 public class SongDAO {
 
     public static List<Song> findSongsByArtistId(int artistId) throws Exception {
-        // ✅ Fetch mbid, title
+        //  Fetch mbid, title
         String sql = "SELECT DISTINCT mbid, title FROM songs WHERE artist_id = ?";
     
         List<Song> songs = new ArrayList<>();
@@ -20,7 +33,7 @@ public class SongDAO {
     
         ResultSet rs = ps.executeQuery();
     
-        // ✅ Get actual artist name from DB
+        // Get actual artist name from DB
         String artistName = ArtistDAO.findArtistNameById(artistId);
     
         while (rs.next()) {

@@ -9,6 +9,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+
+
+
+/**
+ * DAO class for storing and retrieving user genre feedback.
+ *
+ * Tracks likes and dislikes for music genres and provides
+ * methods to retrieve a user's preferred genres based on
+ * accumulated feedback scores.
+ *
+ * @author Harini Baskar
+ */
+
+
+
 public class GenreFeedbackDAO {
 
     private static final String DB_URL = "jdbc:sqlite:harmoniq.db";
@@ -17,7 +32,7 @@ public class GenreFeedbackDAO {
     // SAVE LIKE
     // =========================
     public static void like(String username, String genre) {
-        updateScore(username, genre, 2); // 🔥 stronger signal
+        updateScore(username, genre, 2); 
     }
 
     // =========================
@@ -88,13 +103,13 @@ public class GenreFeedbackDAO {
     }
 
     // =========================
-    // TOP GENRE (SMART VERSION)
+    // TOP GENRE
     // =========================
     public static List<String> getTopGenres(String username) {
 
         Map<String, Integer> scores = getUserScores(username);
     
-        System.out.println("🔥 GENRE SCORES:");
+        System.out.println("GENRE SCORES:");
         scores.forEach((k, v) ->
             System.out.println(k + " = " + v)
         );

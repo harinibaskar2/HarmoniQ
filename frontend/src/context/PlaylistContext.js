@@ -6,7 +6,7 @@ export const PlaylistContext = createContext();
 export const PlaylistProvider = ({ children }) => {
   const API_BASE = "http://localhost:8080";
 
-  const username = "sanjay"; // TEMP (as you said for now)
+  const username = "sanjay"; // TEMP
 
   const [playlists, setPlaylists] = useState([]);
   const [recommendations, setRecommendations] = useState([]);

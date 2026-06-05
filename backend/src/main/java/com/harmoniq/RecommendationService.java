@@ -5,6 +5,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
+
+/**
+ * Service class responsible for generating music recommendations
+ * using a content-based filtering approach.
+ *
+ * This system recommends songs by analyzing similarities between
+ * user preferences and song features such as artists, related artists,
+ * and genres.
+ *
+ *
+ * @author Harini Baskar 
+ */
+
 public class RecommendationService {
 
     private static final double ARTIST_WEIGHT = 2.0;

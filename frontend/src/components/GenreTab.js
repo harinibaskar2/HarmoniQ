@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useContext } from "react";
 import { PlaylistContext } from "../context/PlaylistContext";
 
+
+/**
+ * GenreTab component provides a genre-based music discovery and recommendation interface.
+
+ */
+
+
+
+
+
+
 function GenreTab() {
 
   const [genres, setGenres] = useState([]);
@@ -56,7 +67,7 @@ function GenreTab() {
         setRecommendedSongs(data.songs || []);
       })
       .catch((err) =>
-        console.error("❌ recommendation error:", err)
+        console.error(" recommendation error:", err)
       );
   };
 
@@ -182,7 +193,7 @@ function GenreTab() {
       {/* ================= RECOMMENDATIONS ================= */}
       <div style={{ marginTop: "40px" }}>
 
-        <h3>🎧 Recommended For You</h3>
+        <h3> Recommended For You</h3>
 
         {/* ================= CLICKABLE GENRE BUTTONS ================= */}
         <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>

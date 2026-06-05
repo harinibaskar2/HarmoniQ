@@ -7,6 +7,19 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
+
+
+/**
+ * Utility class for generating and validating JSON Web Tokens (JWTs).
+ *
+ * Used to authenticate users by creating secure tokens that
+ * contain the user's username and an expiration time.
+ *
+ * @author Harini Baskar
+ */
+
+
+
 public class JwtUtil {
 
     // Secure 256-bit key for HS256 (keep in memory)

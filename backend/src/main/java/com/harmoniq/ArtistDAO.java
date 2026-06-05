@@ -5,7 +5,22 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
+/**
+ * Data Access Object (DAO) responsible for performing database operations
+ * related to artists.
+ *
+ * <p>This class provides methods for:
+ * <ul>
+ *     <li>Finding an artist's database ID by name.</li>
+ *     <li>Finding an artist's name by database ID.</li>
+ *     <li>Saving new artist records to the database.</li>
+ * </ul>
+ *
+ * @author Harini Baskar
+
+ */
 public class ArtistDAO {
+
 
     public static Integer findArtistIdByName(String name) throws Exception {
 
@@ -35,18 +50,21 @@ public class ArtistDAO {
         Connection conn = Database.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setInt(1, artistId);
-    
+
         ResultSet rs = ps.executeQuery();
         String name = null;
+
         if (rs.next()) {
             name = rs.getString("name");
         }
-    
+
         rs.close();
         ps.close();
         conn.close();
+
         return name;
     }
+
 
     public static int saveArtist(String name, String mbid) throws Exception {
 
@@ -70,4 +88,3 @@ public class ArtistDAO {
         return id;
     }
 }
-
