@@ -4,13 +4,6 @@ import React, { useEffect, useState } from "react";
 
 
 
- /**
-  * Temporary hardcoded username used to simulate an authenticated user during development.
-  *
-  * This enables testing of user-specific recommendation features. In a production application, this would be replaced with actual authentication logic to determine the logged-in user.
-  */
-
-
 function GenreRecommendations() {
 
   const [songs, setSongs] = useState([]);
