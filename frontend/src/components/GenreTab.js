@@ -3,6 +3,13 @@ import { PlaylistContext } from "../context/PlaylistContext";
 
 
 /**
+
+
+
+ /**
+  * Temporary hardcoded username used to simulate an authenticated user during development.
+  *
+  * This enables testing of user-specific recommendation features. In a production application, this would be replaced with actual authentication logic to determine the logged-in user.
  * GenreTab component provides a genre-based music discovery and recommendation interface.
 
  */
